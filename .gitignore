@@ -1,0 +1,24 @@
+# Ignore personal data
+config.json
+
+# Ignore public pages
+public/*
+!public/favicon.ico
+
+
+# Ignore plugins except templates
+plugins/bfunc/*
+!plugins/bfunc/_*
+
+plugins/ffunc/*
+!plugins/ffunc/_*
+
+plugins/output/*
+!plugins/output/_*
+
+plugins/sensors/*
+!plugins/sensors/_*
+
+# Default ignore files
+logs/*
+*__pycache__*

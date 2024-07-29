@@ -1,0 +1,13 @@
+{
+  "__comment__": "To create a default config file, rename this _config.json to config.json!",
+
+  "subdevices": [
+    {
+      "name": "SomeName",
+      "token": "sometoken123"
+    }
+  ],
+  "environ": {
+    "envvar1": "foobar"
+  }
+}
