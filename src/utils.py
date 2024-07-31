@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import mimetypes
+from types import UnionType
 from typing import Any, ItemsView, Iterator, KeysView, ValuesView
 
 import cv2
@@ -49,6 +50,9 @@ class CaseInsensitiveDict[_T]:
 
     def __iter__(self) -> Iterator[_T]:
         return iter(self._data)
+
+    def dict(self) -> dict[str, _T]:
+        return {k: v for k, v in self.items()}
 
 
 def make_token(ip: str):

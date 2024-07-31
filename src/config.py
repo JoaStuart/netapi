@@ -9,7 +9,9 @@ LOG = logging.getLogger()
 
 
 def load_envvars() -> None:
-    vs: dict[str, str] = load_var("environ")
+    vs = load_var("environ")
+    if not isinstance(vs, dict):
+        return
 
     for k, i in vs.items():
         os.environ[k] = i

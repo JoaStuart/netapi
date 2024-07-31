@@ -26,12 +26,22 @@ class OutputDevice(ABC):
     def api_headers(self) -> dict[str, str]:
         return {}
 
+    def api_response(self, orig: tuple[int, str]) -> tuple[int, str]:
+        """Response code and message for the api request
+
+        Args:
+            orig (tuple[int, str]): Original response
+
+        Returns:
+            tuple[int, str]: Response after changes from this api call
+        """
+        return orig
+
 
 class DefaultOutput(OutputDevice):
     def api_resp(self) -> dict:
         return {k: str(v) for k, v in self.data.items()}
 
 
-OUTPUTS: dict[str, Type[OutputDevice]] = {"default": DefaultOutput} | load_plugins(
-    PL_OUTPUT, OutputDevice
-)
+do: dict[str, Type[OutputDevice]] = {"default": DefaultOutput}
+OUTPUTS: dict[str, Type[OutputDevice]] = do | load_plugins(PL_OUTPUT, OutputDevice)

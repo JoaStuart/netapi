@@ -1,5 +1,5 @@
 {
-  "__comment__": "To create a default config file, rename this _config.json to config.json!",
+  "__comment__": "To create a default config file, rename this _config.json to config.json",
 
   "subdevices": [
     {

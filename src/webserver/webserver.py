@@ -59,7 +59,7 @@ class WebServer:
 
                     if (
                         addr[0] == "127.0.0.1"
-                        or request.method.lower() == "options"
+                        or str(request.method).lower() == "options"
                         or request.read_token()
                     ):
                         Thread(

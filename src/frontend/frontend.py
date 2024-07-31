@@ -1,12 +1,18 @@
 import logging
 from socket import socket
 import traceback
-from device.api import FUNCS
+from typing import Any, Type
 import config
+from device import api
+from device.api import APIFunct
+from locations import PL_FFUNC
 from utils import dumpb
 from webserver.webrequest import WebRequest, WebResponse
 
 LOG = logging.getLogger()
+
+
+FFUNCS: dict[str, Type[APIFunct]] = api.load_dir(PL_FFUNC)
 
 
 class FrontendRequest(WebRequest):
@@ -16,23 +22,26 @@ class FrontendRequest(WebRequest):
 
     def REQUEST(self, path: str, body: dict) -> WebResponse:
         if self._addr[0] != self.backend_ip:
-            return WebResponse(301, "MOVED", [("Location", f"{self.backend_ip}")])
+            return WebResponse(301, "MOVED", {"Location": f"{self.backend_ip}"})
 
         funcs = path.split("/")
-        response = {}
+        response: dict[str, Any] | tuple[bytes, str] = {}
+        headers: dict[str, str] = {}
+        code: tuple[int, str] = (200, "OK")
 
         for f in funcs:
             try:
                 fargs = f.split(".")
 
-                for name, fclass in FUNCS.items():
+                for name, fclass in FFUNCS.items():
                     if name.lower() == fargs[0].lower():
                         res = fclass(self, fargs[1:], body).api()
 
-                        if type(res) == dict:
-                            response |= res
-                        else:
-                            response = res
+                        if type(response) == dict:
+                            if type(res) == dict:
+                                response |= res
+                            else:
+                                response = res
             except Exception:
                 LOG.exception(f"Exception on function `{".".join(fargs)}`")
                 return WebResponse(
@@ -46,8 +55,14 @@ class FrontendRequest(WebRequest):
                     ),
                 )
 
+        return WebResponse(
+            *code,
+            headers=headers,
+            body=dumpb(response) if isinstance(response, dict) else response,
+        )
+
     def send_page(self, fname: str) -> None:
         return None
 
-    def has_public(self) -> str:
+    def has_public(self) -> str | None:
         return None

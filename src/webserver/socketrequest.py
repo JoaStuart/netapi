@@ -125,7 +125,7 @@ class SocketOutFragment:
         self._opcode = 0x0  # Change to continuation OPCODE
 
     def _send(self, fin: bool, payload: bytes | str) -> None:
-        if type(payload) == str:
+        if isinstance(payload, str):
             payload = payload.encode()
         self.fin = fin
 
@@ -157,7 +157,6 @@ class SocketRequest:
         conn: socket.socket,
         web_req,
         addr: tuple[str, int],
-        recv_status: dict[str, str],
         recv_headers: CaseInsensitiveDict[str],
     ) -> None:
         self._parent = parent
@@ -165,7 +164,6 @@ class SocketRequest:
         self._status = WS.CONNECTING
         self._web_req = web_req
         self._addr = addr
-        self._recv_status = recv_status
         self._recv_headers = recv_headers
         self._in_evt = threading.Event()
         self._in_buff: list[SocketInFragment] = []
@@ -184,14 +182,14 @@ class SocketRequest:
             raise Exception("Socket not in CONNECTING state!")
 
         if (
-            self._recv_headers.get("Connection", "").lower() != "upgrade"
-            or self._recv_headers.get("Upgrade", "").lower() != "websocket"
+            str(self._recv_headers.get("Connection", "")).lower() != "upgrade"
+            or str(self._recv_headers.get("Upgrade", "")).lower() != "websocket"
         ):
             self._parent.send_error(400, "INV_HEADER")
             return
 
         try:
-            ver = int(self._recv_headers.get("Sec-WebSocket-Version", ""))
+            ver = int(self._recv_headers.get("Sec-WebSocket-Version") or "")
             if ver != 13:
                 raise ValueError()
         except ValueError:
@@ -199,7 +197,7 @@ class SocketRequest:
             return
 
         key = self._recv_headers.get("Sec-WebSocket-Key", "")
-        conc_key = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+        conc_key = (key or "") + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
         b64_resp = base64.standard_b64encode(hashlib.sha1(conc_key.encode()).digest())
 
         self._web_req.send_response(101, "Switching Protocols")
