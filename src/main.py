@@ -3,13 +3,18 @@ import sys
 import time
 import logging
 import argparse
+import zipfile
 from backend.backend import BackendRequest
 from config import load_envvars
-from locations import ROOT
+import config
+from device.device import DEV_PORT, FrontendDevice
+from frontend.frontend import FrontendRequest
+import locations
 from webserver.webserver import WebServer
 
 
 LOG = logging.getLogger()
+VERSION = 0.1
 
 
 def setup_logger(verbose: bool) -> None:
@@ -19,7 +24,7 @@ def setup_logger(verbose: bool) -> None:
     )
     LOG.setLevel(logging.DEBUG)
 
-    logPath = os.path.join(ROOT, "logs")
+    logPath = os.path.join(locations.ROOT, "logs")
     logName = time.strftime("%Y-%m-%d %H-%M", time.localtime())
 
     for i in os.listdir(logPath):
@@ -35,14 +40,12 @@ def setup_logger(verbose: bool) -> None:
     consoleHandler.setFormatter(logFormatter)
     LOG.addHandler(consoleHandler)
 
-    LOG.info("Starting...")
-
 
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument(
-        "devtype",
-        choices=["frontend", "backend"],
+        "action",
+        choices=["frontend", "backend", "pack"],
         default="backend",
         help="Choose to start backend or frontend",
     )
@@ -57,14 +60,43 @@ def main() -> int:
     setup_logger(args.verbose)
     load_envvars()
 
-    if args.devtype == "frontend":
-        # start frontend
-        pass
-    else:
-        # start backend
-        srv = WebServer(4001, BackendRequest)
-        srv.start_blocking()
-        pass
+    for k in os.listdir(locations.ROOT):
+        name, ext = os.path.splitext(k)
+        if not name.startswith("netapi-"):
+            continue
+
+        v = float(name.split("-")[1])
+        if v > VERSION:
+            LOG.info(f"Updating netapi to version {v}...")
+            locations.unpack(os.path.join(locations.ROOT, k))
+            os.remove(os.path.join(locations.ROOT, k))
+            return 12  # Restart script
+
+    locations.make_dirs()
+
+    match args.action:
+        case "frontend":
+            LOG.info("Starting [FRONTEND]...")
+            # Log in and start frontend
+            try:
+                fdev = FrontendDevice()
+                fdev.login()
+            except Exception:
+                LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
+                return 1
+
+            srv = WebServer(DEV_PORT, FrontendRequest)
+            srv.start_blocking()
+        case "backend":
+            LOG.info("Starting [BACKEND]...")
+            # start backend
+            srv = WebServer(DEV_PORT, BackendRequest)
+            srv.start_blocking()
+        case "pack":
+            LOG.info("Packing source...")
+            # Pack source files
+            zname = f"{locations.ROOT}/netapi-{VERSION}.zip"
+            locations.compress_pkg(zname)
 
     return 0
 

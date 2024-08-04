@@ -1,4 +1,5 @@
 import importlib
+import importlib.util
 import os
 import logging
 import traceback
@@ -17,8 +18,17 @@ def load_plugins(pldir: str, pl_type: Type) -> dict[str, Type]:
 
             try:
                 spec = importlib.util.spec_from_file_location(module_name, plugin_path)
+                if spec == None:
+                    LOG.warning("PluginLoader Spec returned None")
+                    return {}
+
                 module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
+                loader = spec.loader
+                if loader == None:
+                    LOG.warning("PluginLoader SpecLoader returned None")
+                    return {}
+
+                loader.exec_module(module)
 
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)

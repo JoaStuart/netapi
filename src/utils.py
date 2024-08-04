@@ -3,8 +3,10 @@ import hashlib
 import json
 import logging
 import mimetypes
+import os
 from types import UnionType
 from typing import Any, ItemsView, Iterator, KeysView, ValuesView
+import zipfile
 
 import cv2
 
@@ -92,6 +94,29 @@ def mime_by_ext(file: str) -> str:
 
 def dumpb(d: dict) -> tuple[bytes, str]:
     return (json.dumps(d).encode(), "application/json")
+
+
+def compress_dir(
+    zip: zipfile.ZipFile,
+    dir: str,
+    path: str = "",
+    dir_excl_pref: str = "__",
+    file_incl_pref: str = "",
+) -> None:
+    for k in os.listdir(dir):
+        file = os.path.join(dir, k)
+        if os.path.isfile(file) and k.startswith(file_incl_pref):
+            compress_file(zip, file, f"{path}/{k}")
+        elif os.path.isdir(file) and not k.startswith(dir_excl_pref):
+            compress_dir(zip, file, f"{path}/{k}")
+
+
+def compress_file(
+    zip: zipfile.ZipFile,
+    file: str,
+    path: str,
+) -> None:
+    zip.write(file, path)
 
 
 if __name__ == "__main__":

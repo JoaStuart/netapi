@@ -4,7 +4,8 @@ import os
 import socket
 import logging
 import hashlib
-from typing import Type
+from typing import Any, Type
+from urllib.parse import unquote
 
 from locations import PUBLIC
 from utils import CaseInsensitiveDict, dumpb, mime_by_ext
@@ -48,7 +49,8 @@ class WebRequest:
         self.method: str | None = None
         self.version: str | None = None
         self._recv_headers: CaseInsensitiveDict[str] = CaseInsensitiveDict()
-        self._recv_body = None
+        self._recv_body: bytes | None = None
+        self._get_args: dict[str, Any] = {}
         self._conn = conn
         self._addr = addr
 
@@ -59,8 +61,19 @@ class WebRequest:
         r_lines = r_bytes.decode("utf-8", "replace").split("\n")
         status = r_lines.pop(0).split(" ")
         self.method = status.pop(0)
-        self.path = status.pop(0)
+        gargs = status.pop(0).split("?", 1)
         self.version = " ".join(status).strip()
+
+        self.path = gargs[0]
+        if len(gargs) > 1:
+            for k in gargs[1].split("&"):
+                if "=" not in k:
+                    self._get_args[unquote(k.replace("+", " "))] = True
+                else:
+                    c, v = k.split("=", 1)
+                    self._get_args[unquote(c.replace("+", " "))] = unquote(
+                        v.replace("+", " ")
+                    )
 
         try:
             while len(LINE := r_lines.pop(0)) > 0:
@@ -195,7 +208,7 @@ class WebRequest:
                 # SiteScript file exists and we can check format
                 script = load_script_file(PUBLIC, f"{name}.py")
                 if script != None:
-                    s = script()
+                    s = script(self._get_args)
                     site_bin = s.site_read(p)
                     self._respond(WebResponse(200, "OK", body=(site_bin, mime)))
                     return
@@ -253,9 +266,10 @@ class WebRequest:
     def _decode_body(self) -> dict:
         match str(self._recv_headers.get("Content-Type", "")).strip():
             case "application/json":
-                return json.loads(
-                    json.loads((self._recv_body or b"").decode("utf-8", "replace"))
-                )
+                b = (self._recv_body or b"").decode("utf-8", "replace")
+                while not isinstance(b, dict):
+                    b = json.loads(b)
+                return b
             case _:
                 LOG.error(
                     f"Body not recognized: {self._recv_headers.get("Content-Type", "")}"

@@ -18,11 +18,16 @@ FFUNCS: dict[str, Type[APIFunct]] = api.load_dir(PL_FFUNC)
 class FrontendRequest(WebRequest):
     def __init__(self, parent, conn: socket, addr: tuple[str, int]) -> None:
         super().__init__(parent, conn, addr)
-        self.backend_ip = config.load_var("backend.ip")
+        self.backend_ip = config.load_var("backend")
 
     def REQUEST(self, path: str, body: dict) -> WebResponse:
         if self._addr[0] != self.backend_ip:
-            return WebResponse(301, "MOVED", {"Location": f"{self.backend_ip}"})
+            LOG.debug(f"Redirecting to {self.backend_ip}")
+            return WebResponse(
+                301,
+                "MOVED",
+                {"Location": f"http://{self.backend_ip}:4001{path}"},
+            )
 
         funcs = path.split("/")
         response: dict[str, Any] | tuple[bytes, str] = {}

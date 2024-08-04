@@ -4,6 +4,7 @@ from typing import Any, Type
 import urllib.parse
 from backend.output import OUTPUTS, OutputDevice
 from backend.sensor import SENSORS
+import config
 from device.device import Device
 from device import api
 from device.api import APIFunct
@@ -35,31 +36,13 @@ class BackendRequest(WebRequest):
             fargs = k.split(".")
             try:
                 # Try to log device in
-                if self._addr[0] not in DEVICES:
+                if self._addr[0] not in DEVICES or fargs[0] == "login":
+                    DEVICES[self._addr[0]] = dev = Device(self._addr[0])
                     if fargs[0] == "login":
-                        try:
-                            dev = Device(self._addr[0])
-                            dev.load_pub_key(body["key"])
-                            for k in body.get("funcs", []):
-                                dev.append_local_fun(k)
-                            DEVICES[self._addr[0]] = dev
+                        return dev.login(body)
+                    else:
+                        del DEVICES[self._addr[0]]
 
-                            return WebResponse(
-                                200,
-                                "LOGGED_IN",
-                                body=dumpb(
-                                    {
-                                        "message": "Device logged in",
-                                        "token": dev.get_enc_token(),
-                                    }
-                                ),
-                            )
-                        except:
-                            return WebResponse(
-                                400,
-                                "BAD_BODY",
-                                body=dumpb({"message": "Body has bad content"}),
-                            )
                     return WebResponse(
                         401,
                         "NOT_LOGIN",
@@ -69,19 +52,45 @@ class BackendRequest(WebRequest):
                             }
                         ),
                     )
-                device = DEVICES[self._addr[0]]
+                else:
+                    device = DEVICES[self._addr[0]]
+                    if (
+                        not device.check_token(
+                            self._recv_headers.get("Authorization") or ""
+                        )
+                        and self._addr[0] != "127.0.0.1"
+                    ):
+                        return WebResponse(
+                            401,
+                            "INVALID_TOK",
+                            body=dumpb(
+                                {
+                                    "message": (
+                                        "The token provided is not valid"
+                                        if "Authorization" in self._recv_headers
+                                        else "No token provided"
+                                    )
+                                }
+                            ),
+                        )
 
                 # Change output device
+                out = False
                 if fargs[0].startswith(":"):
                     for name, oclass in OUTPUTS.items():
                         if name.lower() == fargs[0].lower().lstrip(":"):
                             outputtype = oclass
-                            continue
+                            out = True
+                            break
+                if out:
+                    continue
 
                 # Check sensor data
+                sensor = False
                 for name, sclass in SENSORS.items():
-                    if name.lower() == fargs[0]:
-                        inst = sclass()
+                    if name.lower() == fargs[0].lower():
+                        LOG.debug("%s sensor chosen", name)
+                        inst = sclass(fargs[1:])
                         inst.tpoll()
                         out = outputtype(body)
                         inst.to(out)
@@ -89,9 +98,14 @@ class BackendRequest(WebRequest):
                             response |= out.api_resp()
                             headers |= out.api_headers()
                             code = out.api_response(code)
-                        continue
+
+                        sensor = True
+                        break
+                if sensor:
+                    continue
 
                 # Execute backend function and display response
+                bfunc = False
                 for name, fclass in BFUNC.items():
                     if name.lower() == fargs[0].lower():
                         res = fclass(self, fargs[1:], body).api()
@@ -101,6 +115,11 @@ class BackendRequest(WebRequest):
                                 response |= res
                             else:
                                 response = res
+
+                        bfunc = True
+                        break
+                if bfunc:
+                    continue
 
                 if device.has_local_fun(fargs[0]):
                     r_code, r_hdrs, r_resp = device.call_local_fun(
@@ -113,6 +132,7 @@ class BackendRequest(WebRequest):
                             response |= r_resp
                         else:
                             response = r_resp
+                    continue
 
                 return WebResponse(
                     404,

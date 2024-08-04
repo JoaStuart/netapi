@@ -1,17 +1,19 @@
 from abc import ABC, abstractmethod
 import importlib
+import importlib.util
 import logging
 import os
 import traceback
-from typing import Type
+from typing import Any, Type
 
 
 LOG = logging.getLogger()
 
 
 class SiteScript(ABC):
-    def __init__(self) -> None:
+    def __init__(self, getargs: dict[str, Any]) -> None:
         self.page_vars: dict[str, str] = {}
+        self.get_args = getargs
 
     @abstractmethod
     def display(self) -> None:
@@ -36,8 +38,13 @@ def load_script_file(pldir: str, f: str) -> Type[SiteScript] | None:
 
     try:
         spec = importlib.util.spec_from_file_location(module_name, plugin_path)
+        if spec == None:
+            return None
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        loader = spec.loader
+        if loader == None:
+            return None
+        loader.exec_module(module)
 
         for attr_name in dir(module):
             attr = getattr(module, attr_name)

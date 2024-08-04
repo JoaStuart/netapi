@@ -5,6 +5,9 @@ config.json
 public/*
 !public/favicon.ico
 
+# Ignore resources
+resources/*
+
 
 # Ignore plugins except templates
 plugins/bfunc/*

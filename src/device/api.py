@@ -29,4 +29,4 @@ class APIFunct(ABC):
 
 
 def load_dir(dir: str) -> dict[str, Type[APIFunct]]:
-    return load_plugins(PL_BFUNC, APIFunct)
+    return load_plugins(dir, APIFunct)

@@ -12,14 +12,21 @@ LOG = logging.getLogger()
 
 
 class Sensor(ABC):
-    def __init__(self, repoll_after: float = 5) -> None:
-        self.data: dict[str, Any] = {}
+    def __init__(self, args: list[str], repoll_after: float = 5) -> None:
+        self.data: dict[str, Any] | None = None
         self._last_poll = 0
         self._repoll_after = repoll_after
+        self.polling = False
+        self.args = args
 
     def tpoll(self) -> None:
-        if time.time() < self._last_poll + self._repoll_after:
+        while self.polling:
+            time.sleep(0.1)
+
+        if time.time() > self._last_poll + self._repoll_after:
+            self.polling = True
             self.poll()
+            self.polling = False
 
     @abstractmethod
     def poll(self) -> None:

@@ -57,19 +57,9 @@ class WebServer:
                         ).start()
                         continue
 
-                    if (
-                        addr[0] == "127.0.0.1"
-                        or str(request.method).lower() == "options"
-                        or request.read_token()
-                    ):
-                        Thread(
-                            target=request.evaluate, daemon=True, name="RequestHTTP"
-                        ).start()
-                    else:
-                        log.debug(
-                            "Token test not passed by %s:%s", str(addr[0]), str(addr[1])
-                        )
-                        request.send_error(403, "API_TOKEN")
+                    Thread(
+                        target=request.evaluate, daemon=True, name="RequestHTTP"
+                    ).start()
                 except ConnectionAbortedError:
                     log.debug("Connection Aborted by %s:%s", str(addr[0]), str(addr[1]))
                     pass
@@ -78,6 +68,7 @@ class WebServer:
                     if conn != None:
                         conn.close()
         except KeyboardInterrupt:
+            self._socket.close()
             return
 
     def stop(self) -> None:
