@@ -8,6 +8,9 @@ public/*
 # Ignore resources
 resources/*
 
+# Ignore Package
+netapi-*.zip
+
 
 # Ignore plugins except templates
 plugins/bfunc/*

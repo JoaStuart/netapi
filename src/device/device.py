@@ -142,6 +142,15 @@ class Device:
             (r.content, r.headers.get("Content-Type", "application/octet-stream")),
         )
 
+    def close(self) -> None:
+        try:
+            requests.get(
+                f"http://{self._ip}:{DEV_PORT}/close",
+                headers={"User-Agent": "JoaNetAPI"},
+            ).close()
+        except Exception:
+            LOG.info("Failed cloes request")
+
 
 class FrontendDevice:
     def __init__(self) -> None:

@@ -1,4 +1,5 @@
 import logging
+import os
 from socket import socket
 import traceback
 from typing import Any, Type
@@ -37,6 +38,13 @@ class FrontendRequest(WebRequest):
         for f in funcs:
             try:
                 fargs = f.split(".")
+
+                if fargs[0].lower() == "close":
+                    LOG.info("Close request recieved")
+                    self._parent._started = False
+                    return WebResponse(
+                        200, "CLOSED", body=dumpb({"message": "Closed!"})
+                    )
 
                 for name, fclass in FFUNCS.items():
                     if name.lower() == fargs[0].lower():

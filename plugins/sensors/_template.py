@@ -7,7 +7,10 @@ class TemplateSensor(Sensor):
         # Poll data from sensor
         self.data = {"foo": "bar", "test": 1234}
 
-    def to(self, device: OutputDevice) -> None:
+    def to(self, device: OutputDevice, args: list[str]) -> None:
+        if self.data == None:
+            return
+
         match type(device).__name__:
             case "StreamDeck":
                 device.data = {"title": self.data["test"]}

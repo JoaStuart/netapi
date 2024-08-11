@@ -87,13 +87,12 @@ class BackendRequest(WebRequest):
 
                 # Check sensor data
                 sensor = False
-                for name, sclass in SENSORS.items():
+                for name, inst in SENSORS.items():
                     if name.lower() == fargs[0].lower():
                         LOG.debug("%s sensor chosen", name)
-                        inst = sclass(fargs[1:])
                         inst.tpoll()
                         out = outputtype(body)
-                        inst.to(out)
+                        inst.to(out, fargs[1:])
                         if type(response) == dict:
                             response |= out.api_resp()
                             headers |= out.api_headers()

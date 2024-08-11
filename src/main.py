@@ -4,7 +4,7 @@ import time
 import logging
 import argparse
 import zipfile
-from backend.backend import BackendRequest
+from backend.backend import DEVICES, BackendRequest
 from config import load_envvars
 import config
 from device.device import DEV_PORT, FrontendDevice
@@ -14,7 +14,7 @@ from webserver.webserver import WebServer
 
 
 LOG = logging.getLogger()
-VERSION = 0.1
+VERSION = 0.2
 
 
 def setup_logger(verbose: bool) -> None:
@@ -92,6 +92,8 @@ def main() -> int:
             # start backend
             srv = WebServer(DEV_PORT, BackendRequest)
             srv.start_blocking()
+            for _, d in DEVICES.items():
+                d.close()
         case "pack":
             LOG.info("Packing source...")
             # Pack source files

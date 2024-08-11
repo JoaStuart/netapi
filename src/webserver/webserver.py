@@ -11,8 +11,6 @@ log = logging.getLogger()
 
 
 class WebServer:
-    PUBLIC_PAGES = ["/ext", "/mama"]
-
     def __init__(self, port, handler: Type[WebRequest] = WebRequest) -> None:
         self._started = False
         self._handler = handler

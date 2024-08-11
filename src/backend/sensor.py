@@ -12,21 +12,26 @@ LOG = logging.getLogger()
 
 
 class Sensor(ABC):
-    def __init__(self, args: list[str], repoll_after: float = 5) -> None:
+    polling = False
+    _last_poll = 0
+
+    def __init__(self, repoll_after: float = 5) -> None:
         self.data: dict[str, Any] | None = None
-        self._last_poll = 0
         self._repoll_after = repoll_after
-        self.polling = False
-        self.args = args
 
     def tpoll(self) -> None:
-        while self.polling:
-            time.sleep(0.1)
-
-        if time.time() > self._last_poll + self._repoll_after:
+        if not self.polling:
+            LOG.debug("Starting poll")
             self.polling = True
-            self.poll()
+            if time.time() > self._last_poll + self._repoll_after:
+                LOG.debug("Poll vars")
+                self.poll()
+                self._last_poll = time.time()
             self.polling = False
+        else:
+            LOG.debug("Falling into wait loop")
+            while self.polling:
+                time.sleep(0.1)
 
     @abstractmethod
     def poll(self) -> None:
@@ -37,7 +42,7 @@ class Sensor(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def to(self, device: OutputDevice) -> None:
+    def to(self, device: OutputDevice, args: list[str]) -> None:
         """Feeds the data of the current sensor into the given `OutputDevice`
 
         Args:
@@ -55,4 +60,6 @@ class Sensor(ABC):
         raise NotImplementedError()
 
 
-SENSORS: dict[str, Type[Sensor]] = load_plugins(PL_SENSOR, Sensor)
+SENSORS: dict[str, Sensor] = {
+    k: v() for k, v in load_plugins(PL_SENSOR, Sensor).items()
+}

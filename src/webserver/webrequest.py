@@ -243,9 +243,9 @@ class WebRequest:
 
         match self.method.lower():
             case "get":
-                rs = self.REQUEST(self.path, {})
+                rs = self.REQUEST(self.path, self._get_args)
             case "post":
-                rs = self.REQUEST(self.path, self._decode_body())
+                rs = self.REQUEST(self.path, self._get_args | self._decode_body())
             case "options":
                 self.do_OPTIONS()
                 return
