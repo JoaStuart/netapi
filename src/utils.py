@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import base64
 import hashlib
 import json
@@ -118,6 +119,12 @@ def compress_file(
     path: str,
 ) -> None:
     zip.write(file, path)
+
+
+class CleanUp(ABC):
+    @abstractmethod
+    def cleanup(self) -> None:
+        pass
 
 
 if __name__ == "__main__":

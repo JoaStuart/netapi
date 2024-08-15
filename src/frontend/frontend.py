@@ -79,3 +79,6 @@ class FrontendRequest(WebRequest):
 
     def has_public(self) -> str | None:
         return None
+
+    def cleanup(self) -> None:
+        self._parent

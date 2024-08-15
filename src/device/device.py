@@ -12,7 +12,7 @@ import requests
 
 import config
 from frontend.frontend import FFUNCS
-from utils import CaseInsensitiveDict, dumpb
+from utils import CaseInsensitiveDict, CleanUp, dumpb
 from webserver.webrequest import WebResponse
 
 
@@ -149,10 +149,10 @@ class Device:
                 headers={"User-Agent": "JoaNetAPI"},
             ).close()
         except Exception:
-            LOG.info("Failed cloes request")
+            LOG.exception("Failed close request for %s", self._ip)
 
 
-class FrontendDevice:
+class FrontendDevice(CleanUp):
     def __init__(self) -> None:
         self._priv_key: rsa.RSAPrivateKey = rsa.generate_private_key(
             public_exponent=65537, key_size=KEY_SIZE
@@ -197,3 +197,6 @@ class FrontendDevice:
 
     def authorize(self) -> dict[str, str]:
         return {"Authorization": f"BEARER {self._token}"}
+
+    def cleanup(self) -> None:
+        pass  # TODO logout

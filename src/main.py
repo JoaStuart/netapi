@@ -3,18 +3,31 @@ import sys
 import time
 import logging
 import argparse
-import zipfile
+import signal
 from backend.backend import DEVICES, BackendRequest
 from config import load_envvars
 import config
 from device.device import DEV_PORT, FrontendDevice
 from frontend.frontend import FrontendRequest
 import locations
+from utils import CleanUp
 from webserver.webserver import WebServer
 
 
 LOG = logging.getLogger()
 VERSION = 0.2
+CLEANUP_STACK: list[CleanUp] = []
+
+
+def handle_cleanup(signum=None, frame=None):
+    for c in CLEANUP_STACK:
+        c.cleanup()
+    CLEANUP_STACK.clear()
+    exit(0)
+
+
+for sig in [signal.SIGINT, signal.SIGTERM]:
+    signal.signal(sig, handle_cleanup)
 
 
 def setup_logger(verbose: bool) -> None:
@@ -80,20 +93,32 @@ def main() -> int:
             # Log in and start frontend
             try:
                 fdev = FrontendDevice()
+                CLEANUP_STACK.append(fdev)
                 fdev.login()
             except Exception:
                 LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
+                CLEANUP_STACK.remove(fdev)
                 return 1
 
             srv = WebServer(DEV_PORT, FrontendRequest)
+            CLEANUP_STACK.append(srv)
             srv.start_blocking()
         case "backend":
             LOG.info("Starting [BACKEND]...")
             # start backend
             srv = WebServer(DEV_PORT, BackendRequest)
+            CLEANUP_STACK.append(srv)
+
+            class BC(CleanUp):
+                def cleanup(self) -> None:
+                    for _, d in DEVICES.items():
+                        d.close()
+
+            CLEANUP_STACK.append(BC())
+
             srv.start_blocking()
-            for _, d in DEVICES.items():
-                d.close()
+            handle_cleanup()
+
         case "pack":
             LOG.info("Packing source...")
             # Pack source files

@@ -5,12 +5,13 @@ from threading import Thread
 from time import sleep
 from typing import Type
 
+from utils import CleanUp
 from webserver.webrequest import WebRequest
 
 log = logging.getLogger()
 
 
-class WebServer:
+class WebServer(CleanUp):
     def __init__(self, port, handler: Type[WebRequest] = WebRequest) -> None:
         self._started = False
         self._handler = handler
@@ -69,13 +70,5 @@ class WebServer:
             self._socket.close()
             return
 
-    def stop(self) -> None:
+    def cleanup(self) -> None:
         self._started = False
-        try:
-            ssock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            ssock.settimeout(0.1)
-            ssock.connect((self._hostname, self._port))
-            ssock.close()
-        except Exception:
-            log.debug("Closing socket wasnt successful", exc_info=True)
-            pass
