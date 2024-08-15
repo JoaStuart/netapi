@@ -18,9 +18,19 @@ class SiteScript(ABC):
     @abstractmethod
     def display(self) -> None:
         """Perform site manipulation"""
+
         pass
 
     def site_read(self, sitefile: str) -> bytes:
+        """Reads the site from the provided sitefile
+
+        Args:
+            sitefile (str): The path to the file to be read
+
+        Returns:
+            bytes: The contents of the file, manipulated by the SiteScript
+        """
+
         with open(sitefile, "rb") as rf:
             content = rf.read()
 
@@ -33,6 +43,16 @@ class SiteScript(ABC):
 
 
 def load_script_file(pldir: str, f: str) -> Type[SiteScript] | None:
+    """Loads the SiteScript file located at `pldir/f`
+
+    Args:
+        pldir (str): The directory the file is located in
+        f (str): The file name
+
+    Returns:
+        Type[SiteScript] | None: The SiteScript if one is found, else None
+    """
+
     plugin_path = os.path.join(pldir, f)
     module_name = f[:-3]
 

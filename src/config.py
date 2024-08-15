@@ -9,6 +9,8 @@ LOG = logging.getLogger()
 
 
 def load_envvars() -> None:
+    """Loads all specified EnvVars from the config file"""
+
     vs = load_var("environ")
     if not isinstance(vs, dict):
         return
@@ -18,6 +20,15 @@ def load_envvars() -> None:
 
 
 def load_var(path: str) -> Any | None:
+    """Loads the variable located at the `path`
+
+    Args:
+        path (str): The path of the variable to load
+
+    Returns:
+        Any | None: The variable located at the `path` or none if the path is invalid
+    """
+
     try:
         with open(os.path.join(ROOT, "config.json"), "r") as rf:
             data = json.loads(rf.read())
@@ -32,6 +43,16 @@ def load_var(path: str) -> Any | None:
 
 
 def set_var(path: str, value: Any) -> None:
+    """Sets the variable at `path` to the specified value
+
+    Args:
+        path (str): The path of the value
+        value (Any): The value to set
+
+    APINote:
+        Still untested because I dont fucking know what this will result in ._.
+    """
+
     cp = os.path.join(ROOT, "config.json")
 
     with open(cp, "r") as rf:

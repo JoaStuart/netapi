@@ -21,9 +21,16 @@ class OutputDevice(ABC):
         Returns:
             dict: A dictionary that gets or'd to the API response
         """
+
         pass
 
     def api_headers(self) -> dict[str, str]:
+        """The response headers that get sent
+
+        Returns:
+            dict[str, str]: Dict containing all headers that should get sent
+        """
+
         return {}
 
     def api_response(self, orig: tuple[int, str]) -> tuple[int, str]:
@@ -35,6 +42,7 @@ class OutputDevice(ABC):
         Returns:
             tuple[int, str]: Response after changes from this api call
         """
+
         return orig
 
 

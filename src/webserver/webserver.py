@@ -21,11 +21,15 @@ class WebServer(CleanUp):
         self._socket.bind((self._hostname, self._port))
 
     def start_blocking(self) -> None:
+        """Starts the server in the current thread"""
+
         self._socket.listen()
         self._started = True
         self._listen()
 
     def start(self) -> None:
+        """Start the server in a background thread"""
+
         Thread(
             target=self.start_blocking,
             daemon=True,
@@ -33,6 +37,8 @@ class WebServer(CleanUp):
         ).start()
 
     def _listen(self) -> None:
+        """Main method for the listening thread"""
+
         try:
             while self._started:
                 conn = None

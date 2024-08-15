@@ -20,6 +20,8 @@ class Sensor(ABC):
         self._repoll_after = repoll_after
 
     def tpoll(self) -> None:
+        """Polls the data using the interval set by the sensor"""
+
         if not self.polling:
             LOG.debug("Starting poll")
             self.polling = True
@@ -35,11 +37,9 @@ class Sensor(ABC):
 
     @abstractmethod
     def poll(self) -> None:
-        """Polls data from the attached sensor
+        """Polls data from the attached sensor"""
 
-        [Needs to be implemented by the sensor!]
-        """
-        raise NotImplementedError()
+        pass
 
     @abstractmethod
     def to(self, device: OutputDevice, args: list[str]) -> None:
@@ -48,7 +48,8 @@ class Sensor(ABC):
         Args:
             device (OutputDevice): Device to feed into
         """
-        raise NotImplementedError()
+
+        pass
 
     @abstractmethod
     def __str__(self) -> str | None:
@@ -57,7 +58,8 @@ class Sensor(ABC):
         Returns:
             str: String containing read values
         """
-        raise NotImplementedError()
+
+        pass
 
 
 SENSORS: dict[str, Sensor] = {

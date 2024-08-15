@@ -1,15 +1,16 @@
+import json
 import logging
 import traceback
-from typing import Any, Type
 import urllib.parse
-from backend.output import OUTPUTS, OutputDevice
-from backend.sensor import SENSORS
-import config
-from device.device import Device
+from typing import Any, Type
+
 from device import api
-from device.api import APIFunct
-from locations import PL_BFUNC, PL_FFUNC
 from utils import dumpb
+from device.api import APIFunct
+from device.device import Device
+from backend.sensor import SENSORS
+from locations import PL_BFUNC, PL_FFUNC
+from backend.output import OUTPUTS, OutputDevice
 from webserver.webrequest import WebRequest, WebResponse
 
 
@@ -24,6 +25,16 @@ DEVICES: dict[str, Device] = {}
 
 class BackendRequest(WebRequest):
     def REQUEST(self, pth: str, body: dict) -> WebResponse:
+        """Method that gets executed upon a request
+
+        Args:
+            pth (str): Path requested
+            body (dict): JSON body of the request or {} if no or non-JSON body
+
+        Returns:
+            WebResponse: The response to be sent back
+        """
+
         path: str = urllib.parse.unquote(pth)
 
         outputtype: Type[OutputDevice] = OUTPUTS["default"]
@@ -37,7 +48,7 @@ class BackendRequest(WebRequest):
             try:
                 # Try to log device in
                 if self._addr[0] not in DEVICES or fargs[0] == "login":
-                    DEVICES[self._addr[0]] = dev = Device(self._addr[0])
+                    dev = Device(self._addr[0], DEVICES)
                     if fargs[0] == "login":
                         return dev.login(body)
                     else:
@@ -121,16 +132,16 @@ class BackendRequest(WebRequest):
                     continue
 
                 if device.has_local_fun(fargs[0]):
-                    r_code, r_hdrs, r_resp = device.call_local_fun(
-                        fargs, body, self._recv_headers
-                    )
-                    code = r_code
-                    headers |= r_hdrs
+                    resp = device.call_local_fun(fargs, body, self._recv_headers)
+                    code = (resp.code(), resp.msg())
+                    headers |= resp.headers()
                     if isinstance(response, dict):
-                        if isinstance(r_resp, dict):
-                            response |= r_resp
+                        data, tpe = resp.body()
+                        if tpe.lower() == "application/json":
+                            jdta = json.loads(data)
+                            response |= jdta
                         else:
-                            response = r_resp
+                            response = (data, tpe)
                     continue
 
                 return WebResponse(

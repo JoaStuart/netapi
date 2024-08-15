@@ -9,6 +9,16 @@ LOG = logging.getLogger()
 
 
 def load_plugins(pldir: str, pl_type: Type) -> dict[str, Type]:
+    """Loads all plugins located inside the provided directory
+
+    Args:
+        pldir (str): Parent directory of the plugins
+        pl_type (Type): The type the plugins should have
+
+    Returns:
+        dict[str, Type]: All loaded plugins
+    """
+
     pl = {}
 
     for f in os.listdir(pldir):

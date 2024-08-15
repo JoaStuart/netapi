@@ -57,6 +57,8 @@ class WebRequest:
         self.websocket_hndlr: Type[SocketRequest] | None = None
 
     def read_headers(self) -> None:
+        """Read all headers from the socket"""
+
         r_bytes = self._conn.recv(2048)
         r_lines = r_bytes.decode("utf-8", "replace").split("\n")
         status = r_lines.pop(0).split(" ")
@@ -91,6 +93,12 @@ class WebRequest:
             self.read_body(r_bytes)
 
     def read_token(self) -> bool:
+        """Read the token and evaluate it [Deprecated]
+
+        Returns:
+            bool: Whether the token is correct
+        """
+
         try:
             tok = self._recv_headers.get("Authorization", None)
             if tok == None:
@@ -112,6 +120,12 @@ class WebRequest:
             return False
 
     def read_body(self, r_bytes: bytes) -> None:
+        """Reads the body from the bytes object
+
+        Args:
+            r_bytes (bytes): The rest of the recieve buffer
+        """
+
         try:
             if "Content-Length" in self._recv_headers:
                 con_len = int(self._recv_headers["Content-Length"])
@@ -119,9 +133,16 @@ class WebRequest:
                     self._recv_body = r_bytes[len(r_bytes) - con_len :]
         except TypeError:
             LOG.debug("Browser sent non-int Content-Length")
-            pass
+            self.send_response(400, "NON_INT_CONTENT_LENGTH")
 
     def send_response(self, code: int, message: str) -> None:
+        """Send a response based on a code and message
+
+        Args:
+            code (int): The HTTP response code
+            message (str): The status message of the response
+        """
+
         self._conn.send(f"{self.version} {code} {message}\n".encode())
 
         self._default_headers()
@@ -130,12 +151,28 @@ class WebRequest:
         )
 
     def send_header(self, key: str, value: str) -> None:
+        """Send one header
+
+        Args:
+            key (str): The key of the header
+            value (str): The value of the header
+        """
+
         self._conn.send(f"{key}: {value}\n".encode())
 
     def end_headers(self) -> None:
+        """End the headers for this response"""
+
         self._conn.send(b"\n")
 
     def send_body(self, body: bytes, c_type: str = "plain/text") -> None:
+        """Send the body of the request
+
+        Args:
+            body (bytes): The body object in bytes
+            c_type (str, optional): The `Content-Type` of the body. Defaults to "plain/text".
+        """
+
         if len(body) > 0:
             self.send_header("Content-Type", c_type)
             compressed = self._compress_body(body)
@@ -146,15 +183,32 @@ class WebRequest:
             self._conn.send(compressed)
             self._conn.close()
 
-    def send_error(self, code: int, status: str, headers: list[tuple[str, str]] = []):
+    def send_error(self, code: int, status: str, headers: dict[str, str] = {}):
+        """Sends an error
+
+        Args:
+            code (int): HTTP code of the error
+            status (str): The status string
+            headers (dict[str, str], optional): The headers to send. Defaults to {}.
+        """
+
         self.send_response(code, status)
         self._default_headers()
-        for hk, hv in headers:
+        for hk, hv in headers.items():
             self.send_header(hk, hv)
         self.end_headers()
         self._conn.close()
 
     def _compress_body(self, orig: bytes) -> bytes:
+        """Tries to compress the body using the encodings provided in the request
+
+        Args:
+            orig (bytes): The body object as bytes
+
+        Returns:
+            bytes: The encoded body or the original body depending on the `Accept-Encoding` and length
+        """
+
         if "accept-encoding" not in self._recv_headers:
             return orig
         body = orig
@@ -173,6 +227,12 @@ class WebRequest:
             return body
 
     def has_public(self) -> str | None:
+        """Checks if there is a public file for the requested path
+
+        Returns:
+            str | None: The file path of the public file if existent or `None`
+        """
+
         if self.path == None:
             return None
         for f in os.listdir(PUBLIC):
@@ -186,9 +246,15 @@ class WebRequest:
         return None
 
     def send_page(self, fname: str) -> None:
+        """Sends the contents in the provided file and searches for SiteScripts of this file
+
+        Args:
+            fname (str): The path to the file
+        """
+
         try:
             p = os.path.join(PUBLIC, fname)
-            name, ext = os.path.splitext(fname)
+            name, _ = os.path.splitext(fname)
 
             if not os.path.isfile(p):
                 self._respond(
@@ -220,6 +286,12 @@ class WebRequest:
             LOG.exception("Exception while sending")
 
     def evaluate(self) -> None:
+        """Evaluates the request using the provided API request method
+
+        Notes:
+            Method awaits refactoring [TODO]
+        """
+
         if str(self._recv_headers.get("Upgrade", "")).lower() == "websocket":
             if self.websocket_hndlr == None:
                 LOG.debug("Tried to connect WS without WS handler")
@@ -257,6 +329,12 @@ class WebRequest:
         self._respond(rs or WebRequest(self, self._conn, self._addr))
 
     def _respond(self, resp: WebResponse) -> None:
+        """Sends a response based on the provided `WebResponse`
+
+        Args:
+            resp (WebResponse): The response object to respond with
+        """
+
         self.send_response(resp.code(), resp.msg())
         for k, v in resp.headers().items():
             self.send_header(k, v)
@@ -264,6 +342,12 @@ class WebRequest:
         self._conn.close()
 
     def _decode_body(self) -> dict:
+        """Tries to decode the body into a JSON dict format
+
+        Returns:
+            dict: The JSON dict or and empty dict if body not JSON
+        """
+
         match str(self._recv_headers.get("Content-Type", "")).strip():
             case "application/json":
                 b = (self._recv_body or b"").decode("utf-8", "replace")
@@ -278,15 +362,29 @@ class WebRequest:
 
     @abstractmethod
     def REQUEST(self, path: str, body: dict) -> WebResponse:
-        raise NotImplementedError()
+        """Main API request method
+
+        Args:
+            path (str): The requested path
+            body (dict): The body provided (or an empty dict if none is provided or body is not in JSON format)
+
+        Returns:
+            WebResponse: The object to respond with
+        """
+
+        pass
 
     def do_OPTIONS(self) -> None:
+        """Default implementation for an `OPTIONS` request"""
+
         self.send_response(204, "OPTIONS")
         self.send_header("Allow", "GET, POST, OPTIONS")
         self.end_headers()
         self._conn.close()
 
     def _default_headers(self) -> None:
+        """Default headers appended to every response"""
+
         self.send_header("Server", "JoaNetAPI")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")

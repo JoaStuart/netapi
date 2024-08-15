@@ -4,6 +4,7 @@ import time
 import logging
 import argparse
 import signal
+from typing import NoReturn
 from backend.backend import DEVICES, BackendRequest
 from config import load_envvars
 import config
@@ -19,7 +20,9 @@ VERSION = 0.2
 CLEANUP_STACK: list[CleanUp] = []
 
 
-def handle_cleanup(signum=None, frame=None):
+def handle_cleanup(*args, **kwargs) -> NoReturn:
+    """Handle the cleanup upon any revieced signal"""
+
     for c in CLEANUP_STACK:
         c.cleanup()
     CLEANUP_STACK.clear()
@@ -31,6 +34,12 @@ for sig in [signal.SIGINT, signal.SIGTERM]:
 
 
 def setup_logger(verbose: bool) -> None:
+    """Setup the logger for this project
+
+    Args:
+        verbose (bool): Whether verbose logging in enabled
+    """
+
     logFormatter = logging.Formatter(
         "%(asctime)s :: >%(threadName)-12.12s< [%(levelname)-1.1s] %(message)s",
         "%Y-%m-%d %H:%M:%S",
@@ -94,7 +103,7 @@ def main() -> int:
             try:
                 fdev = FrontendDevice()
                 CLEANUP_STACK.append(fdev)
-                fdev.login()
+                fdev.login(VERSION)
             except Exception:
                 LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
                 CLEANUP_STACK.remove(fdev)

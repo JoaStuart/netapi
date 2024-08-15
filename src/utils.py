@@ -6,8 +6,9 @@ import logging
 import math
 import mimetypes
 import os
+import platform
 from types import UnionType
-from typing import Any, ItemsView, Iterator, KeysView, ValuesView
+from typing import Any, ItemsView, Iterable, Iterator, KeysView, ValuesView
 import zipfile
 
 import cv2
@@ -59,14 +60,33 @@ class CaseInsensitiveDict[_T]:
         return {k: v for k, v in self.items()}
 
 
-def make_token(ip: str):
+def make_token(ip: str) -> str:
+    """Generates a legacy token [Deprecated]
+
+    Args:
+        ip (str): The IP of the target
+
+    Returns:
+        str: The generated token
+    """
+
     hip = hashlib.md5(ip.encode())
     tarr = [0xFF - i for i in hip.digest()]
 
     return "".join(["{:02x}".format(a) for a in tarr])
 
 
-def tuple_lt(tpl_lower: tuple, tpl_higher: tuple) -> bool:
+def tuple_lt(tpl_lower: tuple[float], tpl_higher: tuple[float]) -> bool:
+    """Checks if the first tuple is less than (<) the second
+
+    Args:
+        tpl_lower (tuple): The tuple supposed to be lower
+        tpl_higher (tuple): The tuple supposed to be higher
+
+    Returns:
+        bool: Whether the first tuple is less than (<) the second
+    """
+
     assert len(tpl_lower) == len(tpl_higher)
 
     for i in range(len(tpl_lower)):
@@ -75,18 +95,45 @@ def tuple_lt(tpl_lower: tuple, tpl_higher: tuple) -> bool:
     return True
 
 
-def imgread_uri(path) -> str:
+def imgread_uri(path: str) -> str:
+    """Reads an image from the provided path into a b64 data url
+
+    Args:
+        path (str): The path to the image
+
+    Returns:
+        str: The image as a b64 encoded data url
+    """
+
     img = cv2.imread(path)
     return img_b64(img)
 
 
 def img_b64(img: cv2.typing.MatLike) -> str:
+    """Encodes a cv2 MatLike object to a b64 data url
+
+    Args:
+        img (cv2.typing.MatLike): The image to encode
+
+    Returns:
+        str: The image as a b64 encoded data url
+    """
+
     png = cv2.imencode(".png", img)
     b64 = base64.standard_b64encode(png[1].tobytes()).decode()
     return f"data:image/png;base64,{b64}"
 
 
 def mime_by_ext(file: str) -> str:
+    """Get the MIME type of a file
+
+    Args:
+        file (str): The file path
+
+    Returns:
+        str: The MIME type or `application/octet-stream` if unknown
+    """
+
     t = mimetypes.guess_type(file)
     if t[0] == None:
         return "application/octet-stream"
@@ -105,6 +152,16 @@ def compress_dir(
     dir_excl_pref: str = "__",
     file_incl_pref: str = "",
 ) -> None:
+    """Compresses a directory into a ZIP file
+
+    Args:
+        zip (zipfile.ZipFile): The ZIP file handle
+        dir (str): The parent directory to be copied into the ZIP file
+        path (str, optional): The iniial path for the zip file. Defaults to "".
+        dir_excl_pref (str, optional): The exclusion parameter for directories. Defaults to "__".
+        file_incl_pref (str, optional): The inclusion parameter for files. Defaults to "".
+    """
+
     for k in os.listdir(dir):
         file = os.path.join(dir, k)
         if os.path.isfile(file) and k.startswith(file_incl_pref):
@@ -118,14 +175,27 @@ def compress_file(
     file: str,
     path: str,
 ) -> None:
+    """Writes the file into the ZIP file
+
+    Args:
+        zip (zipfile.ZipFile): The ZIP file handle
+        file (str): The path of the file to get compressed
+        path (str): The path inside the ZIP file of this file
+    """
+
     zip.write(file, path)
+
+
+def get_os_name() -> str:
+    """
+    Returns:
+        str: The full OS name
+    """
+
+    return " ".join([platform.system(), platform.release()])
 
 
 class CleanUp(ABC):
     @abstractmethod
     def cleanup(self) -> None:
         pass
-
-
-if __name__ == "__main__":
-    print(make_token(input("IP> ")))

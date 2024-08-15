@@ -22,6 +22,16 @@ class FrontendRequest(WebRequest):
         self.backend_ip = config.load_var("backend")
 
     def REQUEST(self, path: str, body: dict) -> WebResponse:
+        """Method called upon a request is recieved
+
+        Args:
+            path (str): The path of the request
+            body (dict): The body sent, or {} if no body or non-JSON body is recieved
+
+        Returns:
+            WebResponse: The response to be sent back
+        """
+
         if self._addr[0] != self.backend_ip:
             LOG.debug(f"Redirecting to {self.backend_ip}")
             return WebResponse(
@@ -75,10 +85,11 @@ class FrontendRequest(WebRequest):
         )
 
     def send_page(self, fname: str) -> None:
+        """Disable public pages for frontend server"""
+
         return None
 
     def has_public(self) -> str | None:
+        """Disable public pages for frontend server"""
+        
         return None
-
-    def cleanup(self) -> None:
-        self._parent

@@ -25,6 +25,7 @@ class APIFunct(ABC):
         Returns:
             dict | tuple[bytes, str]: A JSON response or a bytes body with a mime type
         """
+
         pass
 
 
