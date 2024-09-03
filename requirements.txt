@@ -1,3 +1,9 @@
 cryptography
 opencv-python
 requests
+pystray
+pyzbar
+mss
+numpy
+tk
+pyperclip

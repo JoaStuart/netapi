@@ -10,6 +10,7 @@ from config import load_envvars
 import config
 from device.device import DEV_PORT, FrontendDevice
 from frontend.frontend import FrontendRequest
+from frontend.systray import SysTray
 import locations
 from utils import CleanUp
 from webserver.webserver import WebServer
@@ -63,6 +64,16 @@ def setup_logger(verbose: bool) -> None:
     LOG.addHandler(consoleHandler)
 
 
+def restart() -> NoReturn:
+    os.execl(sys.executable, __file__, *sys.argv[1:])
+
+
+def pack(name: str) -> None:
+    LOG.info("Packing source...")
+    zname = f"{locations.ROOT}{name}"
+    locations.compress_pkg(zname)
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument(
@@ -92,23 +103,33 @@ def main() -> int:
             LOG.info(f"Updating netapi to version {v}...")
             locations.unpack(os.path.join(locations.ROOT, k))
             os.remove(os.path.join(locations.ROOT, k))
-            return 12  # Restart script
+
+            restart()
+            return 12
 
     locations.make_dirs()
+
+    pack("/public/pack.zip")
 
     match args.action:
         case "frontend":
             LOG.info("Starting [FRONTEND]...")
+            tray = SysTray()
+            CLEANUP_STACK.append(tray)
+            tray.start()
             # Log in and start frontend
             try:
                 fdev = FrontendDevice()
                 CLEANUP_STACK.append(fdev)
                 fdev.login(VERSION)
             except Exception:
+                tray.update_icon(SysTray.FAILED)
                 LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
+                time.sleep(2)
                 CLEANUP_STACK.remove(fdev)
                 return 1
 
+            tray.update_icon(SysTray.CONNECTED)
             srv = WebServer(DEV_PORT, FrontendRequest)
             CLEANUP_STACK.append(srv)
             srv.start_blocking()
@@ -129,10 +150,7 @@ def main() -> int:
             handle_cleanup()
 
         case "pack":
-            LOG.info("Packing source...")
-            # Pack source files
-            zname = f"{locations.ROOT}/netapi-{VERSION}.zip"
-            locations.compress_pkg(zname)
+            pack(f"/netapi-{VERSION}.zip")
 
     return 0
 

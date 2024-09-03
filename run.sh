@@ -9,14 +9,7 @@ if [ ! -f "$PYTHON_SCRIPT" ]; then
     exit 1
 fi
 
-# Loop to restart the Python script if it exits with code 2
-while true; do
-    python3.12 "$PYTHON_SCRIPT" "$@"
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -ne 12 ]; then
-        break
-    fi
-    echo "Restarting..."
-done
+python3.12 "$PYTHON_SCRIPT" "$@"
+EXIT_CODE=$?
 
 exit $EXIT_CODE

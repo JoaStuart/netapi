@@ -82,6 +82,32 @@ class ZipFile(ZipItem):
         )
 
 
+class ZipScriptDir(ZipItem):
+    @staticmethod
+    def multi_platform(name: str, exe: str, cmd: str) -> list[tuple[str, str]]:
+        return [
+            ZipScriptDir.wincmd(name, exe, cmd),
+            ZipScriptDir.lincmd(name, exe, cmd),
+        ]
+
+    @staticmethod
+    def wincmd(name: str, exe: str, cmd: str) -> tuple[str, str]:
+        return f"{name}.bat", f"@echo off\n{exe} {cmd}"
+
+    @staticmethod
+    def lincmd(name: str, exe: str, cmd: str) -> tuple[str, str]:
+        return f"{name}.sh", f"#!/bin/bash\n{exe} {cmd}"
+
+    def __init__(self, zname: str, scripts: list[tuple[str, str]]) -> None:
+        self.zname = zname
+        self.scripts = scripts
+
+    def compress(self, zip: zipfile.ZipFile):
+        zip.mkdir(f"{self.pdir}/{self.zname}")
+        for sname, scontent in self.scripts:
+            zip.writestr(f"{self.pdir}/{self.zpath}/{sname}", scontent)
+
+
 dirtree = ZipDir(
     "",
     [

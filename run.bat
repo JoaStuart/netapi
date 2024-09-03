@@ -15,10 +15,5 @@ REM Run the Python script with all provided arguments
 python "%PYTHON_SCRIPT%" %*
 set EXIT_CODE=%ERRORLEVEL%
 
-REM Check if the exit code is 2
-if %EXIT_CODE% equ 12 (
-    echo Restarting...
-    goto loop
-)
-
+REM Exit
 exit /b %EXIT_CODE%
