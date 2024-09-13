@@ -7,7 +7,7 @@ import traceback
 from typing import Any, Type
 
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 
 class SiteScript(ABC):

@@ -5,7 +5,12 @@ from typing import Any
 from locations import ROOT
 
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
+
+
+def __load_json(path: str) -> dict:
+    with open(os.path.join(ROOT, "config.json"), "r") as rf:
+        return json.loads(rf.read())
 
 
 def load_envvars() -> None:
@@ -30,8 +35,7 @@ def load_var(path: str) -> Any | None:
     """
 
     try:
-        with open(os.path.join(ROOT, "config.json"), "r") as rf:
-            data = json.loads(rf.read())
+        data = __load_json(os.path.join(ROOT, "config.json"))
 
         for p in path.split("."):
             data = data[p]
@@ -53,17 +57,26 @@ def set_var(path: str, value: Any) -> None:
         Still untested because I dont fucking know what this will result in ._.
     """
 
-    cp = os.path.join(ROOT, "config.json")
-
-    with open(cp, "r") as rf:
-        data = json.loads(rf.read())
+    cpath = os.path.join(ROOT, "config.json")
+    data = __load_json(cpath)
 
     data_part = data
     path_part = path.split(".")
+
     for k in range(len(path_part) - 1):
         data_part = data_part[path_part[k]]
 
     data_part[path_part[-1]] = value
 
-    with open(cp, "w") as wf:
+    with open(cpath, "w") as wf:
         wf.write(json.dumps(data, indent=2))
+
+
+def load_full() -> dict:
+    """Loads the whole config file
+
+    Returns:
+        dict[Any, Any]: The root node of the config file
+    """
+
+    return __load_json(os.path.join(ROOT, "config.json"))

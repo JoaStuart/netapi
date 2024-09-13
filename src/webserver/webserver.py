@@ -8,7 +8,7 @@ from typing import Type
 from utils import CleanUp
 from webserver.webrequest import WebRequest
 
-log = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 
 class WebServer(CleanUp):
@@ -49,7 +49,7 @@ class WebServer(CleanUp):
                         continue
 
                     conn, addr = self._socket.accept()
-                    log.debug("Got request by %s", str(addr[0]))
+                    LOG.debug("Got request by %s", str(addr[0]))
                     request: WebRequest = self._handler(self, conn, addr)
                     request.read_headers()
 
@@ -66,15 +66,16 @@ class WebServer(CleanUp):
                         target=request.evaluate, daemon=True, name="RequestHTTP"
                     ).start()
                 except ConnectionAbortedError:
-                    log.debug("Connection Aborted by %s:%s", str(addr[0]), str(addr[1]))
+                    LOG.debug("Connection Aborted by %s:%s", str(addr[0]), str(addr[1]))
                     pass
                 except Exception:
-                    log.debug("Connection closed unexpectedly:", exc_info=True)
+                    LOG.debug("Connection closed unexpectedly:", exc_info=True)
                     if conn != None:
                         conn.close()
         except KeyboardInterrupt:
-            self._socket.close()
-            return
+            pass
+        self._socket.close()
+        LOG.info("Closed socket")
 
     def cleanup(self) -> None:
         self._started = False

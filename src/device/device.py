@@ -11,12 +11,11 @@ import random
 import requests
 
 import config
-from frontend.frontend import FFUNCS
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
 from webserver.webrequest import WebResponse
 
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 KEY_SIZE = 2048
 DEV_PORT = 4001
@@ -294,6 +293,7 @@ class FrontendDevice(CleanUp):
         Raises:
             Exception: Upon a login failure
         """
+        from frontend.frontend import FFUNCS
 
         pem: bytes = self._pub_key.public_bytes(
             encoding=serialization.Encoding.PEM,

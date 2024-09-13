@@ -2,7 +2,7 @@ import logging
 import os
 import zipfile
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 SRC = os.path.dirname(__file__)
 ROOT = os.path.join(SRC, "..")

@@ -10,7 +10,7 @@ from locations import PL_FFUNC
 from utils import dumpb
 from webserver.webrequest import WebRequest, WebResponse
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 
 FFUNCS: dict[str, Type[APIFunct]] = api.load_dir(PL_FFUNC)
@@ -91,5 +91,5 @@ class FrontendRequest(WebRequest):
 
     def has_public(self) -> str | None:
         """Disable public pages for frontend server"""
-        
+
         return None

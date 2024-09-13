@@ -9,16 +9,15 @@ from utils import dumpb
 from device.api import APIFunct
 from device.device import Device
 from backend.sensor import SENSORS
-from locations import PL_BFUNC, PL_FFUNC
+from locations import PL_BFUNC
 from backend.output import OUTPUTS, OutputDevice
 from webserver.webrequest import WebRequest, WebResponse
 
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 
 BFUNC: dict[str, Type[APIFunct]] = api.load_dir(PL_BFUNC)
-FFUNC: dict[str, Type[APIFunct]] = api.load_dir(PL_FFUNC)
 
 DEVICES: dict[str, Device] = {}
 

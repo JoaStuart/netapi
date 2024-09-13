@@ -1,5 +1,3 @@
 - Not unlocking socket port 4001 after ^C
 
-- Config setter test (too scared rn)
-
 - QuickAction scripts engine + generator + executor

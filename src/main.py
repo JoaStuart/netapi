@@ -5,18 +5,15 @@ import logging
 import argparse
 import signal
 from typing import NoReturn
-from backend.backend import DEVICES, BackendRequest
+from device.device import DEV_PORT
 from config import load_envvars
 import config
-from device.device import DEV_PORT, FrontendDevice
-from frontend.frontend import FrontendRequest
-from frontend.systray import SysTray
 import locations
 from utils import CleanUp
 from webserver.webserver import WebServer
 
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 VERSION = 0.2
 CLEANUP_STACK: list[CleanUp] = []
 
@@ -42,7 +39,7 @@ def setup_logger(verbose: bool) -> None:
     """
 
     logFormatter = logging.Formatter(
-        "%(asctime)s :: >%(threadName)-12.12s< [%(levelname)-1.1s] %(message)s",
+        "%(asctime)s :: %(funcName)s<@>%(threadName)s [%(levelname)-1.1s] %(message)s",
         "%Y-%m-%d %H:%M:%S",
     )
     LOG.setLevel(logging.DEBUG)
@@ -74,7 +71,7 @@ def pack(name: str) -> None:
     locations.compress_pkg(zname)
 
 
-def main() -> int:
+def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument(
         "action",
@@ -88,11 +85,10 @@ def main() -> int:
         action="store_true",
         help="Enable verbose logging",
     )
-    args = p.parse_args()
+    return p.parse_args()
 
-    setup_logger(args.verbose)
-    load_envvars()
 
+def update() -> None:
     for k in os.listdir(locations.ROOT):
         name, ext = os.path.splitext(k)
         if not name.startswith("netapi-"):
@@ -107,50 +103,63 @@ def main() -> int:
             restart()
             return 12
 
+
+def main() -> int:
+    args = parse_args()
+
+    setup_logger(args.verbose)
+    load_envvars()
+
+    update()
+
     locations.make_dirs()
 
     pack("/public/pack.zip")
 
-    match args.action:
-        case "frontend":
-            LOG.info("Starting [FRONTEND]...")
-            tray = SysTray()
-            CLEANUP_STACK.append(tray)
-            tray.start()
-            # Log in and start frontend
-            try:
-                fdev = FrontendDevice()
-                CLEANUP_STACK.append(fdev)
-                fdev.login(VERSION)
-            except Exception:
-                tray.update_icon(SysTray.FAILED)
-                LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
-                time.sleep(2)
-                CLEANUP_STACK.remove(fdev)
-                return 1
+    act = args.action
 
-            tray.update_icon(SysTray.CONNECTED)
-            srv = WebServer(DEV_PORT, FrontendRequest)
-            CLEANUP_STACK.append(srv)
-            srv.start_blocking()
-        case "backend":
-            LOG.info("Starting [BACKEND]...")
-            # start backend
-            srv = WebServer(DEV_PORT, BackendRequest)
-            CLEANUP_STACK.append(srv)
+    if act == "frontend":
+        from frontend.systray import SysTray
+        from device.device import FrontendDevice
+        from frontend.frontend import FrontendRequest
 
-            class BC(CleanUp):
-                def cleanup(self) -> None:
-                    for _, d in DEVICES.items():
-                        d.close()
+        LOG.info("Starting [FRONTEND]...")
+        tray = SysTray()
+        CLEANUP_STACK.append(tray)
+        tray.start()
+        # Log in and start frontend
+        try:
+            fdev = FrontendDevice()
+            CLEANUP_STACK.append(fdev)
+            fdev.login(VERSION)
+        except Exception:
+            tray.update_icon(SysTray.FAILED)
+            LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
+            time.sleep(2)
+            CLEANUP_STACK.remove(fdev)
+            return 1
 
-            CLEANUP_STACK.append(BC())
+        tray.update_icon(SysTray.CONNECTED)
+        srv = WebServer(DEV_PORT, FrontendRequest)
+        CLEANUP_STACK.append(srv)
+        srv.start_blocking()
+    elif act == "backend":
+        from backend.backend import DEVICES, BackendRequest
 
-            srv.start_blocking()
-            handle_cleanup()
+        LOG.info("Starting [BACKEND]...")
+        # start backend
+        srv = WebServer(DEV_PORT, BackendRequest)
+        CLEANUP_STACK.append(srv)
 
-        case "pack":
-            pack(f"/netapi-{VERSION}.zip")
+        class BC(CleanUp):
+            def cleanup(self) -> None:
+                for _, d in DEVICES.items():
+                    d.close()
+
+        CLEANUP_STACK.append(BC())
+
+        srv.start_blocking()
+        handle_cleanup()
 
     return 0
 

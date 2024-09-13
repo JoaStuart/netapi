@@ -6,7 +6,7 @@ import logging
 import threading
 from utils import CaseInsensitiveDict
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class WS:

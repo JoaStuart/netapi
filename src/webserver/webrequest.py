@@ -13,7 +13,7 @@ from webserver.compression_util import ENCODINGS
 from webserver.sitescript import load_script_file
 from webserver.socketrequest import SocketRequest
 
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 
 
 class WebResponse(ABC):
