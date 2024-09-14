@@ -13,7 +13,7 @@ import zipfile
 
 import cv2
 
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 class CaseInsensitiveDict[_T]:

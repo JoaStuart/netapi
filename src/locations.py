@@ -1,8 +1,11 @@
 import logging
 import os
+from typing import IO
 import zipfile
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
+
+VERSION = 0.31
 
 SRC = os.path.dirname(__file__)
 ROOT = os.path.join(SRC, "..")
@@ -144,6 +147,6 @@ def compress_pkg(zip_file: str):
         dirtree.compress(zip)
 
 
-def unpack(zip_file: str):
+def unpack(zip_file: str | IO[bytes]):
     with zipfile.ZipFile(zip_file, "r") as zip:
         zip.extractall(ROOT)

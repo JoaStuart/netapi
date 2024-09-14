@@ -13,7 +13,7 @@ from webserver.compression_util import ENCODINGS
 from webserver.sitescript import load_script_file
 from webserver.socketrequest import SocketRequest
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 
 class WebResponse(ABC):
@@ -62,20 +62,7 @@ class WebRequest:
         r_bytes = self._conn.recv(2048)
         r_lines = r_bytes.decode("utf-8", "replace").split("\n")
         status = r_lines.pop(0).split(" ")
-        self.method = status.pop(0)
-        gargs = status.pop(0).split("?", 1)
-        self.version = " ".join(status).strip()
-
-        self.path = gargs[0]
-        if len(gargs) > 1:
-            for k in gargs[1].split("&"):
-                if "=" not in k:
-                    self._get_args[unquote(k.replace("+", " "))] = True
-                else:
-                    c, v = k.split("=", 1)
-                    self._get_args[unquote(c.replace("+", " "))] = unquote(
-                        v.replace("+", " ")
-                    )
+        self._parse_status(status)
 
         try:
             while len(LINE := r_lines.pop(0)) > 0:
@@ -88,9 +75,27 @@ class WebRequest:
         except IndexError:
             pass
 
-        METHOD = self.method.lower()
+        METHOD = self.method.lower()  # type: ignore | self.method is never none here, because of the self._parse_status(...) call
         if METHOD == "post" or METHOD == "put":
             self.read_body(r_bytes)
+
+    def _parse_status(self, status: list[str]) -> None:
+        self.method = status.pop(0)
+        gargs = status.pop(0).split("?", 1)
+        self.version = " ".join(status).strip()
+
+        self.path = gargs[0]
+
+        # Decode GET arguments
+        if len(gargs) > 1:
+            for k in gargs[1].split("&"):
+                if "=" not in k:
+                    self._get_args[unquote(k.replace("+", " "))] = True
+                else:
+                    c, v = k.split("=", 1)
+                    self._get_args[unquote(c.replace("+", " "))] = unquote(
+                        v.replace("+", " ")
+                    )
 
     def read_token(self) -> bool:
         """Read the token and evaluate it [Deprecated]
@@ -253,10 +258,10 @@ class WebRequest:
         """
 
         try:
-            p = os.path.join(PUBLIC, fname)
+            path = os.path.join(PUBLIC, fname)
             name, _ = os.path.splitext(fname)
 
-            if not os.path.isfile(p):
+            if not os.path.isfile(path):
                 self._respond(
                     WebResponse(
                         404,
@@ -268,22 +273,28 @@ class WebRequest:
                 )
                 return
 
-            mime = mime_by_ext(p)
-            if os.path.isfile(os.path.join(PUBLIC, f"{name}.py")):
-                LOG.debug("SiteScript file found")
-                # SiteScript file exists and we can check format
-                script = load_script_file(PUBLIC, f"{name}.py")
-                if script != None:
-                    s = script(self._get_args)
-                    site_bin = s.site_read(p)
-                    self._respond(WebResponse(200, "OK", body=(site_bin, mime)))
-                    return
-                LOG.debug("Not a SiteScript python file")
+            mime = mime_by_ext(path)
+            if self._load_sitescript(name, mime, path):
+                return
 
-            with open(p, "rb") as rf:
+            with open(path, "rb") as rf:
                 self._respond(WebResponse(200, "OK", body=(rf.read(), mime)))
         except Exception:
             LOG.exception("Exception while sending")
+
+    def _load_sitescript(self, name: str, mime: str, path: str) -> bool:
+        if os.path.isfile(os.path.join(PUBLIC, f"{name}.py")):
+            LOG.debug("SiteScript file found")
+            # SiteScript file exists and we can check format
+            script = load_script_file(PUBLIC, f"{name}.py")
+            if script != None:
+                s = script(self._get_args)
+                site_bin = s.site_read(path)
+                self._respond(WebResponse(200, "OK", body=(site_bin, mime)))
+                return True
+            LOG.debug("Not a SiteScript python file")
+
+        return False
 
     def evaluate(self) -> None:
         """Evaluates the request using the provided API request method
@@ -323,7 +334,7 @@ class WebRequest:
                 return
             case _:
                 LOG.debug("Unknown method [%s]", self.method.lower())
-                self.send_error(406, "METHOD_NOT_ALLOWED")
+                self.send_error(404, "NOT_FOUND")
                 return
 
         self._respond(rs or WebRequest(self, self._conn, self._addr))

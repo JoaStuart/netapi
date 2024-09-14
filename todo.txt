@@ -1,3 +1,4 @@
 - Not unlocking socket port 4001 after ^C
-
 - QuickAction scripts engine + generator + executor
+
+- Permission system for requests by token

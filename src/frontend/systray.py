@@ -1,4 +1,6 @@
 import os
+from threading import Thread
+from typing import NoReturn, Callable
 import pystray
 from PIL import Image
 
@@ -12,6 +14,9 @@ class SysTray(CleanUp):
     FAILED = 2
 
     def __init__(self) -> None:
+        self._icon = None
+        self.handle_cleanup: Callable[..., NoReturn] | None = None
+
         menu = pystray.Menu(
             pystray.MenuItem("Exit", self.cleanup),
         )
@@ -21,28 +26,40 @@ class SysTray(CleanUp):
         )
 
     def start(self) -> None:
-        self._tray.run_detached()
+        Thread(target=self._tray.run, daemon=True).start()
 
     def _load_icon(self):
         self._icon = Image.open(os.path.join(locations.PUBLIC, "favicon.ico"))
 
     def _icon_by_state(self, state: int):
+        if self._icon == None:
+            self._load_icon()
+
         match state:
             case SysTray.CONNECTING:
-                return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0xFF, 0xFF, 0x00))
+                return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0xFF, 0xFF, 0x00))  # type: ignore
             case SysTray.CONNECTED:
-                return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0x00, 0xFF, 0x00))
+                return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0x00, 0xFF, 0x00))  # type: ignore
             case SysTray.FAILED:
-                return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0xFF, 0x00, 0x00))
+                return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0xFF, 0x00, 0x00))  # type: ignore
 
         return self._icon
 
     def update_icon(self, state: int) -> None:
         self._tray.icon = self._icon_by_state(state)
+        self._tray._update_icon()
 
     def cleanup(self) -> None:
+        if not self._tray._running:
+            return
+
         self._tray.stop()
-        self._icon.close()
+
+        if self._icon != None:
+            self._icon.close()
+
+        if self.handle_cleanup != None:
+            self.handle_cleanup()
 
 
 def replace_color(

@@ -5,7 +5,7 @@ from typing import Any
 from locations import ROOT
 
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 
 def __load_json(path: str) -> dict:

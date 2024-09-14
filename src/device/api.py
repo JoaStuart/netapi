@@ -7,7 +7,7 @@ from locations import PL_BFUNC
 from webserver.webrequest import WebRequest
 
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 
 class APIFunct(ABC):

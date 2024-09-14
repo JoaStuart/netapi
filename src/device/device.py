@@ -1,7 +1,9 @@
 import base64
 import gzip
+from io import BytesIO
 import logging
-from typing import Any
+from typing import Any, NoReturn
+import zipfile
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
@@ -11,11 +13,13 @@ import random
 import requests
 
 import config
+from locations import VERSION
+import locations
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
 from webserver.webrequest import WebResponse
 
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 KEY_SIZE = 2048
 DEV_PORT = 4001
@@ -173,6 +177,7 @@ class Device:
                     {
                         "message": "Device logged in",
                         "token": self.get_enc_token(),
+                        "update": VERSION > body.get("version", 0),
                     }
                 ),
             )
@@ -193,9 +198,11 @@ class Device:
             bool: Whether the token is valid
         """
 
-        tk = hdr.replace("BEARER", "").strip()
-        if tk.lower() == self._token.lower():
+        tk = hdr.lower().replace("bearer", "").strip()
+        if tk == self._token.hex().lower():
             return True
+        else:
+            LOG.info("%s did not match %s", tk, self._token.hex())
 
         for k in self._subdevices:
             if tk.lower() == k.token.lower():
@@ -261,6 +268,7 @@ class Device:
             requests.get(
                 f"http://{self._ip}:{DEV_PORT}/close",
                 headers={"User-Agent": "JoaNetAPI"},
+                timeout=0.1,
             ).close()
         except Exception:
             LOG.exception("Failed close request for %s", self._ip)
@@ -284,7 +292,7 @@ class FrontendDevice(CleanUp):
         self._token: str | None = None
         self._ip: str = str(config.load_var("backend"))
 
-    def login(self, version: float) -> None:
+    def login(self, version: float) -> None | NoReturn:
         """Sends a login request to the backend device
 
         Args:
@@ -330,6 +338,29 @@ class FrontendDevice(CleanUp):
             ),
         ).decode()
 
+        if b.get("update", False):
+            self._update()
+
+    def _update(self) -> None | NoReturn:
+        """Downloads the latest packed sources and updates"""
+
+        LOG.info("Starting update")
+        dl = requests.get(self._action_url("pack.zip"), headers=self.authorize())
+
+        if not dl.ok:
+            LOG.warning(
+                f"Update failed because of content download response {dl.status_code}: {dl.reason}"
+            )
+            return
+
+        zbinary = BytesIO(dl.content)
+        locations.unpack(zbinary)
+
+        LOG.info("Finished update, restarting...")
+        from main import restart
+
+        restart()
+
     def authorize(self) -> dict[str, str]:
         """
         Returns:
@@ -338,9 +369,18 @@ class FrontendDevice(CleanUp):
 
         return {"Authorization": f"BEARER {self._token}"}
 
+    def _action_url(self, *actions: str) -> str:
+        """Generates the URL for the provided actions
+
+        Returns:
+            str: URL to request for actions to be taken
+        """
+
+        return f"http://{self._ip}:{DEV_PORT}/{"/".join(actions)}"
+
     def cleanup(self) -> None:
         r = requests.get(
-            f"http://{self._ip}:{DEV_PORT}/logout",
+            self._action_url("logout"),
             headers=self.authorize(),
         )
         if not r.ok:

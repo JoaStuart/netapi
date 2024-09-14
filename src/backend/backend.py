@@ -14,7 +14,7 @@ from backend.output import OUTPUTS, OutputDevice
 from webserver.webrequest import WebRequest, WebResponse
 
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 
 BFUNC: dict[str, Type[APIFunct]] = api.load_dir(PL_BFUNC)
@@ -32,6 +32,9 @@ class BackendRequest(WebRequest):
 
         Returns:
             WebResponse: The response to be sent back
+
+        Notes:
+            Method awaits refactoring [TODO]
         """
 
         path: str = urllib.parse.unquote(pth)

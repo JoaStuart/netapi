@@ -7,19 +7,22 @@ import signal
 from typing import NoReturn
 from device.device import DEV_PORT
 from config import load_envvars
+from locations import VERSION
 import config
 import locations
 from utils import CleanUp
 from webserver.webserver import WebServer
 
 
-LOG = logging.getLogger(__name__)
-VERSION = 0.2
+LOG = logging.getLogger()
+
 CLEANUP_STACK: list[CleanUp] = []
 
 
 def handle_cleanup(*args, **kwargs) -> NoReturn:
     """Handle the cleanup upon any revieced signal"""
+
+    LOG.info("Starting cleanup")
 
     for c in CLEANUP_STACK:
         c.cleanup()
@@ -62,7 +65,7 @@ def setup_logger(verbose: bool) -> None:
 
 
 def restart() -> NoReturn:
-    os.execl(sys.executable, __file__, *sys.argv[1:])
+    os.execl(sys.executable, "python", __file__, *sys.argv[1:])
 
 
 def pack(name: str) -> None:
@@ -104,64 +107,74 @@ def update() -> None:
             return 12
 
 
+def frontend() -> None | int:
+    from frontend.systray import SysTray
+    from device.device import FrontendDevice
+    from frontend.frontend import FrontendRequest
+
+    LOG.info("Starting [FRONTEND]...")
+    tray = SysTray()
+    CLEANUP_STACK.append(tray)
+    tray.start()
+    # Log in and start frontend
+    try:
+        fdev = FrontendDevice()
+        CLEANUP_STACK.append(fdev)
+        fdev.login(VERSION)
+    except Exception:
+        tray.update_icon(SysTray.FAILED)
+        LOG.exception(f"Login failed at {config.load_var("backend")}. Exiting...")
+        time.sleep(2)
+        CLEANUP_STACK.remove(fdev)
+        return 1
+
+    tray.update_icon(SysTray.CONNECTED)
+    tray.handle_cleanup = handle_cleanup
+
+    LOG.info("Connected to backend")
+    srv = WebServer(DEV_PORT, FrontendRequest)
+    CLEANUP_STACK.append(srv)
+    srv.start_blocking()
+
+
+def backend() -> None | int:
+    from backend.backend import DEVICES, BackendRequest
+
+    LOG.info("Starting [BACKEND]...")
+    # start backend
+    srv = WebServer(DEV_PORT, BackendRequest)
+    CLEANUP_STACK.append(srv)
+
+    class BC(CleanUp):
+        def cleanup(self) -> None:
+            for _, d in DEVICES.items():
+                d.close()
+
+    CLEANUP_STACK.append(BC())
+
+    srv.start_blocking()
+    handle_cleanup()
+
+
 def main() -> int:
     args = parse_args()
 
     setup_logger(args.verbose)
     load_envvars()
 
-    update()
-
     locations.make_dirs()
 
-    pack("/public/pack.zip")
-
     act = args.action
+    ret = 0
 
     if act == "frontend":
-        from frontend.systray import SysTray
-        from device.device import FrontendDevice
-        from frontend.frontend import FrontendRequest
-
-        LOG.info("Starting [FRONTEND]...")
-        tray = SysTray()
-        CLEANUP_STACK.append(tray)
-        tray.start()
-        # Log in and start frontend
-        try:
-            fdev = FrontendDevice()
-            CLEANUP_STACK.append(fdev)
-            fdev.login(VERSION)
-        except Exception:
-            tray.update_icon(SysTray.FAILED)
-            LOG.warning(f"Login failed at {config.load_var("backend")}. Exiting...")
-            time.sleep(2)
-            CLEANUP_STACK.remove(fdev)
-            return 1
-
-        tray.update_icon(SysTray.CONNECTED)
-        srv = WebServer(DEV_PORT, FrontendRequest)
-        CLEANUP_STACK.append(srv)
-        srv.start_blocking()
+        update()
+        ret = frontend() or ret
     elif act == "backend":
-        from backend.backend import DEVICES, BackendRequest
+        pack("/public/pack.zip")
+        ret = backend() or ret
 
-        LOG.info("Starting [BACKEND]...")
-        # start backend
-        srv = WebServer(DEV_PORT, BackendRequest)
-        CLEANUP_STACK.append(srv)
-
-        class BC(CleanUp):
-            def cleanup(self) -> None:
-                for _, d in DEVICES.items():
-                    d.close()
-
-        CLEANUP_STACK.append(BC())
-
-        srv.start_blocking()
-        handle_cleanup()
-
-    return 0
+    return ret
 
 
 if __name__ == "__main__":

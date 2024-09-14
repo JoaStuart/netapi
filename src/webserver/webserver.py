@@ -8,7 +8,7 @@ from typing import Type
 from utils import CleanUp
 from webserver.webrequest import WebRequest
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 
 class WebServer(CleanUp):
@@ -41,7 +41,6 @@ class WebServer(CleanUp):
 
         try:
             while self._started:
-                conn = None
                 try:
                     readable, _, _ = select.select([self._socket], [], [], 0)
                     if self._socket not in readable:
@@ -49,33 +48,36 @@ class WebServer(CleanUp):
                         continue
 
                     conn, addr = self._socket.accept()
-                    LOG.debug("Got request by %s", str(addr[0]))
-                    request: WebRequest = self._handler(self, conn, addr)
-                    request.read_headers()
-
-                    if file := request.has_public():
-                        Thread(
-                            target=request.send_page,
-                            args=(file,),
-                            daemon=True,
-                            name="StaticHTTP",
-                        ).start()
-                        continue
-
-                    Thread(
-                        target=request.evaluate, daemon=True, name="RequestHTTP"
-                    ).start()
-                except ConnectionAbortedError:
-                    LOG.debug("Connection Aborted by %s:%s", str(addr[0]), str(addr[1]))
-                    pass
+                    self._handle(conn, addr)
                 except Exception:
-                    LOG.debug("Connection closed unexpectedly:", exc_info=True)
-                    if conn != None:
-                        conn.close()
+                    LOG.debug("Exception while recieving", exc_info=True)
         except KeyboardInterrupt:
             pass
         self._socket.close()
         LOG.info("Closed socket")
+
+    def _handle(self, conn: socket.socket, addr: tuple[str, int]) -> None:
+        try:
+            LOG.debug("Got request by %s", str(addr[0]))
+            request: WebRequest = self._handler(self, conn, addr)
+            request.read_headers()
+
+            if file := request.has_public():
+                Thread(
+                    target=request.send_page,
+                    args=(file,),
+                    daemon=True,
+                    name="StaticHTTP",
+                ).start()
+                return
+
+            Thread(target=request.evaluate, daemon=True, name="RequestHTTP").start()
+        except ConnectionAbortedError:
+            LOG.debug("Connection Aborted by %s:%s", str(addr[0]), str(addr[1]))
+        except Exception:
+            LOG.debug("Connection closed unexpectedly:", exc_info=True)
+            if conn != None:
+                conn.close()
 
     def cleanup(self) -> None:
         self._started = False

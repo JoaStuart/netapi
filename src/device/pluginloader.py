@@ -5,7 +5,7 @@ import logging
 import traceback
 from typing import Type
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger()
 
 
 def load_plugins(pldir: str, pl_type: Type) -> dict[str, Type]:
