@@ -136,7 +136,7 @@ class BackendRequest(WebRequest):
                 if device.has_local_fun(fargs[0]):
                     resp = device.call_local_fun(fargs, body, self._recv_headers)
                     code = (resp.code(), resp.msg())
-                    headers |= resp.headers()
+                    # headers |= resp.headers()
                     if isinstance(response, dict):
                         data, tpe = resp.body()
                         if tpe.lower() == "application/json":

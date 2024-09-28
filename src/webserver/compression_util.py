@@ -36,6 +36,6 @@ def gzip_compress(data: bytes, compresslevel: int = 9):
 
 
 ENCODINGS = [
-    ("deflate", deflate),
-    ("gzip", gzip_compress),
+    #("deflate", deflate),
+    #("gzip", gzip_compress),
 ]
