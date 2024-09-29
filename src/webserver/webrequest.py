@@ -290,7 +290,7 @@ class WebRequest:
             if script != None:
                 s = script(self._get_args)
                 site_bin = s.site_read(path)
-                self._respond(WebResponse(200, "OK", body=(site_bin, mime)))
+                self._respond(WebResponse(200, "OK", body=(site_bin, mime), headers=s.headers))
                 return True
             LOG.debug("Not a SiteScript python file")
 

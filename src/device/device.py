@@ -201,8 +201,6 @@ class Device:
         tk = hdr.lower().replace("bearer", "").strip()
         if tk == self._token.hex().lower():
             return True
-        else:
-            LOG.info("%s did not match %s", tk, self._token.hex())
 
         for k in self._subdevices:
             if tk.lower() == k.token.lower():

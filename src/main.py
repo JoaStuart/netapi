@@ -5,6 +5,7 @@ import logging
 import argparse
 import signal
 from typing import NoReturn
+from backend.interval import Schedule
 from device.device import DEV_PORT
 from config import load_envvars
 from locations import VERSION
@@ -151,6 +152,9 @@ def backend() -> None | int:
                 d.close()
 
     CLEANUP_STACK.append(BC())
+
+    Schedule.start_scheduler()
+    LOG.info("Started scheduler")
 
     srv.start_blocking()
     handle_cleanup()

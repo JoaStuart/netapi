@@ -12,8 +12,9 @@ LOG = logging.getLogger()
 
 class SiteScript(ABC):
     def __init__(self, getargs: dict[str, Any]) -> None:
-        self.page_vars: dict[str, str] = {}
+        self.page_vars: dict[str, str | bytes] = {}
         self.get_args = getargs
+        self.headers = {}
 
     @abstractmethod
     def display(self) -> None:
@@ -31,13 +32,15 @@ class SiteScript(ABC):
             bytes: The contents of the file, manipulated by the SiteScript
         """
 
+        self.display()
+
         with open(sitefile, "rb") as rf:
             content = rf.read()
 
-        self.display()
-
         for k, v in self.page_vars.items():
-            content = content.replace(f"%%{k}%%".encode(), v.encode())
+            content = content.replace(
+                f"%%{k}%%".encode(), v.encode() if isinstance(v, str) else v
+            )
 
         return content
 
