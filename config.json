@@ -6,7 +6,8 @@
   },
   "plants": {
     "port": "/dev/ttyACM0",
-    "critical": [0.62, 0.65]
+    "critical": [0.62, 0.65],
+    "names": ["Cleo", "Luna"]
   },
   "govee": {
     "ip": "192.168.188.24"

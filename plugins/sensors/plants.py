@@ -68,8 +68,10 @@ class Plants(Sensor):
                         p = int(args[0])
                         if p >= 0 and p < Plants.COUNT:
                             ok = critical[p] < float(self.data[str(p)])
-                            title = str(
-                                convert_to_score(self.data[str(p)], critical[p])
+                            title = (
+                                str(convert_to_score(self.data[str(p)], critical[p]))
+                                + "\n"
+                                + config.load_var("plants.names")[p]  # type: ignore
                             )
                 except ValueError:
                     pass
