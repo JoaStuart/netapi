@@ -1,25 +1,9 @@
-# Ignore personal data
-config.json
+# Ignore personal pages (just ignore that)
+public/mama.html
+public/mama.py
 
-# Ignore public pages
-public/*
-!public/favicon.ico
-
-# Ignore resources
-resources/*
-
-# Ignore plugins except templates
-plugins/bfunc/*
-!plugins/bfunc/_*
-
-plugins/ffunc/*
-!plugins/ffunc/_*
-
-plugins/output/*
-!plugins/output/_*
-
-plugins/sensors/*
-!plugins/sensors/_*
+# Ignore preset files
+_config.json
 
 # Default ignore files
 logs/*

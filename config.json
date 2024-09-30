@@ -1,0 +1,24 @@
+{
+  "backend": "192.168.188.49",
+  "mama": {
+    "status": 0,
+    "note": ""
+  },
+  "plants": {
+    "port": "/dev/ttyACM0",
+    "critical": [0.62, 0.65]
+  },
+  "govee": {
+    "ip": "192.168.188.24"
+  },
+  "sky": {
+    "width": 640,
+    "height": 480,
+    "camera": 1,
+    "interval": 10,
+    "save_time": 720,
+    "save_folder": "../sky"
+  },
+  "subdevices": [],
+  "environ": {}
+}
