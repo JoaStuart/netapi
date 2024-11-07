@@ -2,6 +2,9 @@
 public/mama.html
 public/mama.py
 
+# Generated Video output
+public/sky.mp4
+
 # Ignore preset files
 _config.json
 
