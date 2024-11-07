@@ -3,7 +3,6 @@ import gzip
 from io import BytesIO
 import logging
 from typing import Any, NoReturn
-import zipfile
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
@@ -18,11 +17,17 @@ import locations
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
 from webserver.webrequest import WebResponse
 
+from typing import TYPE_CHECKING
+
 
 LOG = logging.getLogger()
 
 KEY_SIZE = 2048
 DEV_PORT = 4001
+
+# Import PermissionLevel upon Type checking to avoid circular import
+if TYPE_CHECKING:
+    from device.permissions import PermissionLevel
 
 
 class SubDevice:
@@ -188,24 +193,29 @@ class Device:
                 body=dumpb({"message": "Body has bad content"}),
             )
 
-    def check_token(self, hdr: str) -> bool:
+    def check_token(self, hdr: str) -> "PermissionLevel | None":
         """Checks if the provided token is valid for this device
 
         Args:
             hdr (str): The value of the `Authorization` header
 
         Returns:
-            bool: Whether the token is valid
+            PermissionLevel | None: The permission level this token grants this device, or `None` if token is invalid
         """
+
+        from device.permissions import (
+            MaxPermissions,
+            SubdevPermissions,
+        )
 
         tk = hdr.lower().replace("bearer", "").strip()
         if tk == self._token.hex().lower():
-            return True
+            return MaxPermissions(self)
 
         for k in self._subdevices:
             if tk.lower() == k.token.lower():
-                return True
-        return False
+                return SubdevPermissions(self)
+        return None
 
     def load_subdevs(self, subdevs) -> None:
         """Load the subdevice from a JSON dict
