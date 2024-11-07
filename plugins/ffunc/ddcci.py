@@ -1,13 +1,27 @@
-from ctypes import *
-from ctypes import wintypes
+from ctypes import (
+    wintypes,
+    Structure,
+    c_wchar,
+    c_bool,
+    c_ulong,
+    c_char,
+    c_byte,
+    c_uint,
+    CFUNCTYPE,
+    POINTER,
+    byref,
+    pointer,
+)
 from threading import Thread
 import traceback
 
 from device.api import APIFunct
 
-user32 = windll.user32
-kernel32 = windll.kernel32
-dxva2 = windll.dxva2
+from ctypes import windll  # type: ignore    Linux does not know the `windll`
+
+user32 = windll.user32  # type: ignore       import because it only exists on
+kernel32 = windll.kernel32  # type: ignore   Windows. User is supposed to only
+dxva2 = windll.dxva2  # type: ignore         add this FFunc on Windows machines!
 
 
 class PHYSICAL_MONITOR(Structure):
@@ -53,6 +67,7 @@ class DDC_CI(APIFunct):
                 return {"ddcci": self.PHY_MONITORS}
             elif len(self.args) == 2:
                 mon_arg = self.args[0]
+                monitor = []
                 if mon_arg == "*":
                     for k, v in self.PHY_MONITORS.items():
                         if v is not None:
@@ -125,7 +140,7 @@ class DDC_CI(APIFunct):
 
         return hmon_list
 
-    def __poll_physical_monitors(self, hmon_list: list[int]) -> dict[int, str | None]:
+    def __poll_physical_monitors(self, hmon_list: list[int]) -> None:
         for hmon in hmon_list:
             num = c_ulong()
             dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, pointer(num)),
@@ -236,6 +251,6 @@ if __name__ == "__main__":
                 elif code.startswith("q"):
                     print(ddcci.current_value(monitor, int(code[1:], base=16)))
                 else:
-                    print(ddcci.self.PHY_MONITORS.get(monitor, None))
+                    print(ddcci.PHY_MONITORS.get(monitor, None))
             except KeyboardInterrupt:
                 break
