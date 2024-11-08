@@ -26,6 +26,11 @@
     "save_time": 720,
     "save_folder": "../sky"
   },
+  "ntfy": {
+    "ip": "192.168.188.48",
+    "port": "5105",
+    "default_topic": "joa"
+  },
   "subdevices": [],
   "environ": {}
 }
