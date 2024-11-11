@@ -12,7 +12,7 @@ LOG = logging.getLogger()
 
 class APIFunct(ABC):
     def __init__(
-        self, request: WebRequest, args: list[str], body: dict[str, Any]
+        self, request: WebRequest | None, args: list[str], body: dict[str, Any]
     ) -> None:
         self.request = request
         self.args = args

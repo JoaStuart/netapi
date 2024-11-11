@@ -195,6 +195,25 @@ def get_os_name() -> str:
     return " ".join([platform.system(), platform.release()])
 
 
+def load_dict_var(dct: dict, path: str) -> Any:
+    """Loads a variable from a variable depth dictionary
+
+    Args:
+        dct (dict): Dictionary to search
+        path (str): Path of variable to get
+
+    Returns:
+        Any: The value of the variable
+    """
+
+    parts = path.split(".")
+
+    for p in parts:
+        dct = dct[p]
+
+    return dct
+
+
 class CleanUp(ABC):
     @abstractmethod
     def cleanup(self) -> None:

@@ -5,6 +5,7 @@ import logging
 import argparse
 import signal
 from typing import NoReturn
+from backend.automation import Automation
 from backend.interval import Schedule
 from device.device import DEV_PORT
 from config import load_envvars
@@ -155,6 +156,9 @@ def backend() -> None | int:
 
     Schedule.start_scheduler()
     LOG.info("Started scheduler")
+
+    Automation.load_all()
+    LOG.info("Loaded automations")
 
     srv.start_blocking()
     handle_cleanup()

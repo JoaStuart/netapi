@@ -1,0 +1,28 @@
+{
+  "@type": "automation",
+  "title": "Plant notification",
+  "frequency": 10800,
+  "if": {
+    "query": "/plants",
+    "$ok": "ok",
+    "$names": "critical",
+    "check": "not $ok"
+  },
+  "then": [
+    {
+      "path": "/ntfy",
+      "body": {
+        "topic": "joa",
+        "title": "$names needs water!",
+        "message": "",
+        "tags": ["warning", "potted_plant"],
+        "priority": 5
+      }
+    }
+  ],
+  "wait": {
+    "query": "/plants.0",
+    "$ok": "ok",
+    "check": "$ok"
+  }
+}
