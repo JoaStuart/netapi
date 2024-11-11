@@ -15,6 +15,8 @@ PL_SENSOR = os.path.join(ROOT, "plugins/sensors")
 PL_OUTPUT = os.path.join(ROOT, "plugins/output")
 PL_BFUNC = os.path.join(ROOT, "plugins/bfunc")
 PL_FFUNC = os.path.join(ROOT, "plugins/ffunc")
+RESOURCES = os.path.join(ROOT, "resources")
+AUTOMATION = os.path.join(ROOT, "automations")
 
 
 class ZipItem:

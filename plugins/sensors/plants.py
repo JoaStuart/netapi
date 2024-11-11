@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Any
 import serial
 import termios
 from backend.output import OutputDevice
@@ -49,59 +50,70 @@ class Plants(Sensor):
 
         self.data = {str(k): float(data[k]) for k in range(Plants.COUNT)}
 
+    def get_plant_data(self, pid: int) -> dict[str, Any]:
+        if self.data == None:
+            return {}
+
+        pdata = self.data[str(pid)]
+        critical = config.load_var("plants.critical")
+        if not isinstance(critical, list):
+            LOG.warning("config::plants.critical must be list[float]")
+            return {}
+
+        names = config.load_var("plants.names")
+        if not isinstance(names, list):
+            LOG.warning("config::plants.names must be list[str]")
+            return {}
+
+        pcrit = critical[pid]
+        isok = pcrit < float(pdata)
+        score = convert_to_score(pdata, pcrit)
+        name = names[pid]
+
+        return {"name": name, "score": score, "ok": isok}
+
     def to(self, device: OutputDevice, args: list[str]) -> None:
         if self.data == None:
             device.data = {"alert": "alert"}
             return
 
-        critical = config.load_var("plants.critical")
-        if not isinstance(critical, list):
-            LOG.warning("config::plants.critical must be list[float]")
+        selected_plants = []
+
+        a = args if len(args) > 0 else [i for i in range(Plants.COUNT)]
+
+        for arg in a:
+            try:
+                pid = int(arg)
+                selected_plants.append(self.get_plant_data(pid))
+            except (ValueError, IndexError):
+                pass
+
+        names = " | ".join([plant["name"] for plant in selected_plants])
+        min_score = min(plant["score"] for plant in selected_plants)
+        all_ok = all(plant["ok"] for plant in selected_plants)
+        critical_plants = " and ".join(
+            plant["name"] for plant in selected_plants if not plant["ok"]
+        )
+
+        if type(device).__name__ == "StreamDeck":
+            impath = os.path.join(
+                locations.RESOURCES,
+                f"images/plant_{"green" if all_ok else "red"}.png",
+            )
+
+            device.data = {
+                "image": utils.imgread_uri(impath),
+                "title": f"{names}\n{min_score}",
+                "alert": "ok",
+            }
             return
 
-        match type(device).__name__:
-            case "StreamDeck":
-                ok, title = None, None
-
-                try:
-                    if len(args) > 0:
-                        p = int(args[0])
-                        if p >= 0 and p < Plants.COUNT:
-                            ok = critical[p] < float(self.data[str(p)])
-                            title = (
-                                str(convert_to_score(self.data[str(p)], critical[p]))
-                                + "\n"
-                                + config.load_var("plants.names")[p]  # type: ignore
-                            )
-                except ValueError:
-                    pass
-
-                ok = ok or utils.tuple_lt(
-                    tuple(critical),
-                    tuple([self.data[str(k)] for k in range(Plants.COUNT)]),
-                )
-                t_scores = [
-                    convert_to_score(self.data[str(k)], critical[k])
-                    for k in range(Plants.COUNT)
-                ]
-                title = title or " | ".join(
-                    [str(t_scores[i]) for i in range(Plants.COUNT)]
-                )
-
-                device.data = {
-                    "title": title,
-                    "image": utils.imgread_uri(
-                        os.path.join(
-                            locations.ROOT,
-                            "resources",
-                            "images",
-                            f"plant_{"green" if ok else "red"}.png",
-                        )
-                    ),
-                    "alert": "ok",
-                }
-            case _:
-                device.data = self.data
+        device.data = {
+            "name": names,
+            "score": min_score,
+            "ok": all_ok,
+            "critical": critical_plants,
+        }
 
     def __str__(self) -> str | None:
         if self.data == None:

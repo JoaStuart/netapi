@@ -187,7 +187,7 @@ class BackendRequest(WebRequest):
                 if inst.data is None:
                     continue
 
-                out = self.outputtype(inst.data)
+                out = self.outputtype(body)
                 inst.to(out, fargs[1:])
                 if type(self.response) == dict:
                     self.response |= out.api_resp()
