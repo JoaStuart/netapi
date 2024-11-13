@@ -5,7 +5,7 @@ import zipfile
 
 LOG = logging.getLogger()
 
-VERSION = 0.31
+VERSION = 0.43
 
 SRC = os.path.dirname(__file__)
 ROOT = os.path.join(SRC, "..")
@@ -17,6 +17,11 @@ PL_BFUNC = os.path.join(ROOT, "plugins/bfunc")
 PL_FFUNC = os.path.join(ROOT, "plugins/ffunc")
 RESOURCES = os.path.join(ROOT, "resources")
 AUTOMATION = os.path.join(ROOT, "automations")
+
+MULTICAST_GROUP = "239.255.255.250"
+MULTICAST_PORT = 1900
+MULTICAST_LIBRARY = "me.joa.netapi"
+MULTICAST_SERVICE = "LoginServer"
 
 
 class ZipItem:

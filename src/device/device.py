@@ -292,13 +292,13 @@ class Device:
 
 
 class FrontendDevice(CleanUp):
-    def __init__(self) -> None:
+    def __init__(self, ip: str) -> None:
         self._priv_key: rsa.RSAPrivateKey = rsa.generate_private_key(
             public_exponent=65537, key_size=KEY_SIZE
         )
         self._pub_key: rsa.RSAPublicKey = self._priv_key.public_key()
         self._token: str | None = None
-        self._ip: str = str(config.load_var("backend"))
+        self._ip: str = ip
 
     def login(self, version: float) -> None | NoReturn:
         """Sends a login request to the backend device

@@ -7,8 +7,10 @@ import signal
 from typing import NoReturn
 from backend.automation import Automation
 from backend.interval import Schedule
+from backend.multicast_srv import MulticastServer
 from device.device import DEV_PORT
 from config import load_envvars
+from frontend.multicast_cli import MulticastClient
 from locations import VERSION
 import config
 import locations
@@ -115,17 +117,27 @@ def frontend() -> None | int:
     from frontend.frontend import FrontendRequest
 
     LOG.info("Starting [FRONTEND]...")
+
+    # Start systray
     tray = SysTray()
     CLEANUP_STACK.append(tray)
     tray.start()
+
+    # Get backend IP by Multicast
+    mcast_client = MulticastClient()
+    ip = mcast_client.request()
+    if ip is None:
+        LOG.warning("The server could not be found!")
+        return 1
+
     # Log in and start frontend
     try:
-        fdev = FrontendDevice()
+        fdev = FrontendDevice(ip)
         CLEANUP_STACK.append(fdev)
         fdev.login(VERSION)
     except Exception:
         tray.update_icon(SysTray.FAILED)
-        LOG.exception(f"Login failed at {config.load_var("backend")}. Exiting...")
+        LOG.exception(f"Login failed at {ip}. Exiting...")
         time.sleep(2)
         CLEANUP_STACK.remove(fdev)
         return 1
@@ -134,7 +146,7 @@ def frontend() -> None | int:
     tray.handle_cleanup = handle_cleanup
 
     LOG.info("Connected to backend")
-    srv = WebServer(DEV_PORT, FrontendRequest)
+    srv = WebServer(DEV_PORT, FrontendRequest, {"ip": ip})
     CLEANUP_STACK.append(srv)
     srv.start_blocking()
 
@@ -143,6 +155,10 @@ def backend() -> None | int:
     from backend.backend import DEVICES, BackendRequest
 
     LOG.info("Starting [BACKEND]...")
+    # Start Multicast backend
+    multi_server = MulticastServer()
+    multi_server.background_listen()
+
     # start backend
     srv = WebServer(DEV_PORT, BackendRequest)
     CLEANUP_STACK.append(srv)

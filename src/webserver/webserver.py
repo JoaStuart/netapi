@@ -3,7 +3,7 @@ import socket
 import logging
 from threading import Thread
 from time import sleep
-from typing import Type
+from typing import Any, Type
 
 from utils import CleanUp
 from webserver.webrequest import WebRequest
@@ -12,9 +12,12 @@ LOG = logging.getLogger()
 
 
 class WebServer(CleanUp):
-    def __init__(self, port, handler: Type[WebRequest] = WebRequest) -> None:
+    def __init__(
+        self, port, handler: Type[WebRequest] = WebRequest, args: dict[str, Any] = {}
+    ) -> None:
         self._started = False
         self._handler = handler
+        self._handler_args = args
         self._hostname = "0.0.0.0"
         self._port = port
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,7 +62,7 @@ class WebServer(CleanUp):
     def _handle(self, conn: socket.socket, addr: tuple[str, int]) -> None:
         try:
             LOG.debug("Got request by %s", str(addr[0]))
-            request: WebRequest = self._handler(self, conn, addr)
+            request: WebRequest = self._handler(self, conn, addr, self._handler_args)
             request.read_headers()
 
             if file := request.has_public():

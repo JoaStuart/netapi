@@ -17,9 +17,11 @@ FFUNCS: dict[str, Type[APIFunct]] = api.load_dir(PL_FFUNC)
 
 
 class FrontendRequest(WebRequest):
-    def __init__(self, parent, conn: socket, addr: tuple[str, int]) -> None:
-        super().__init__(parent, conn, addr)
-        self.backend_ip = config.load_var("backend")
+    def __init__(
+        self, parent, conn: socket, addr: tuple[str, int], args: dict[str, Any]
+    ) -> None:
+        super().__init__(parent, conn, addr, args)
+        self.backend_ip = str(args["ip"])
 
     def REQUEST(self, path: str, body: dict) -> WebResponse:
         """Method called upon a request is recieved

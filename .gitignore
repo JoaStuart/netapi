@@ -12,3 +12,8 @@ _config.json
 # Default ignore files
 logs/*
 *__pycache__*
+
+# Ignore RSA keys
+resources/multicast_priv.rsa
+resources/multicast_publ.rsa
+public/multicast.rsa

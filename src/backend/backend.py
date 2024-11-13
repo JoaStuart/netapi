@@ -35,8 +35,10 @@ class FinishError(RuntimeError):
 
 
 class BackendRequest(WebRequest):
-    def __init__(self, parent, conn: socket, addr: tuple[str, int]) -> None:
-        super().__init__(parent, conn, addr)
+    def __init__(
+        self, parent, conn: socket, addr: tuple[str, int], args: dict[str, Any]
+    ) -> None:
+        super().__init__(parent, conn, addr, args)
 
         self.outputtype: Type[OutputDevice] = OUTPUTS["default"]
         self.response: dict[str, str] | tuple[bytes, str] = {}
