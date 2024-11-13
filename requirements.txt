@@ -1,9 +1,8 @@
-cryptography
-opencv-python
-requests
-pystray
-pyzbar
-mss
-numpy
-tk
-pyperclip
+cryptography==43.0.0
+opencv-python==4.10.0.84
+requests==2.32.3
+pystray==0.19.5
+pyzbar==0.1.9
+mss==9.0.2
+numpy==2.0.1
+pyperclip==1.9.0

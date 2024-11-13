@@ -18,7 +18,7 @@ class Schedule:
 
     @staticmethod
     def start_scheduler() -> None:
-        Thread(target=Schedule._tick_all, daemon=True).start()
+        Thread(target=Schedule._tick_all, name="Intervalometer", daemon=True).start()
 
     @staticmethod
     def _tick_all() -> None:

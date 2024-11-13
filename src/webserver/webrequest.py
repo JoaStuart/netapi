@@ -43,7 +43,9 @@ class WebResponse(ABC):
 
 
 class WebRequest:
-    def __init__(self, parent, conn: socket.socket, addr: tuple[str, int]) -> None:
+    def __init__(
+        self, parent, conn: socket.socket, addr: tuple[str, int], args: dict[str, Any]
+    ) -> None:
         self._parent = parent
         self.path: str | None = None
         self.method: str | None = None
@@ -53,6 +55,7 @@ class WebRequest:
         self._get_args: dict[str, Any] = {}
         self._conn = conn
         self._addr = addr
+        self._args = args
 
         self.websocket_hndlr: Type[SocketRequest] | None = None
 
@@ -290,7 +293,9 @@ class WebRequest:
             if script != None:
                 s = script(self._get_args)
                 site_bin = s.site_read(path)
-                self._respond(WebResponse(200, "OK", body=(site_bin, mime), headers=s.headers))
+                self._respond(
+                    WebResponse(200, "OK", body=(site_bin, mime), headers=s.headers)
+                )
                 return True
             LOG.debug("Not a SiteScript python file")
 
@@ -337,7 +342,7 @@ class WebRequest:
                 self.send_error(404, "NOT_FOUND")
                 return
 
-        self._respond(rs or WebRequest(self, self._conn, self._addr))
+        self._respond(rs or WebRequest(self, self._conn, self._addr, self._args))
 
     def _respond(self, resp: WebResponse) -> None:
         """Sends a response based on the provided `WebResponse`
