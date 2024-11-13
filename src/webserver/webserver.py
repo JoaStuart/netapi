@@ -21,6 +21,7 @@ class WebServer(CleanUp):
         self._hostname = "0.0.0.0"
         self._port = port
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind((self._hostname, self._port))
 
     def start_blocking(self) -> None:
