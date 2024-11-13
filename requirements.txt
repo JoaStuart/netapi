@@ -1,4 +1,4 @@
-cryptography==43.0.0
+cryptography==43.0.3
 opencv-python==4.10.0.84
 requests==2.32.3
 pystray==0.19.5
