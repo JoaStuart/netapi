@@ -6,9 +6,6 @@ public/mama.py
 public/sky.mp4
 public/pack.zip
 
-# Ignore preset files
-_config.json
-
 # Default ignore files
 logs/*
 *__pycache__*

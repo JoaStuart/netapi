@@ -122,6 +122,7 @@ dirtree = ZipDir(
     "",
     [
         ZipDir("logs"),
+        ZipDir("automations"),
         ZipDir(
             "plugins",
             [
@@ -136,9 +137,10 @@ dirtree = ZipDir(
             [ZipFile("favicon.ico", "favicon.ico")],
         ),
         ZipLiveDir("src"),
-        ZipFile("_config.json"),
+        ZipFile("config.json"),
         ZipFile("run.sh"),
         ZipFile("run.bat"),
+        ZipFile("runw.bat"),
         ZipFile("requirements.txt"),
     ],
     True,
