@@ -10,6 +10,7 @@ from urllib.parse import unquote
 from locations import PUBLIC
 from utils import CaseInsensitiveDict, dumpb, mime_by_ext
 from webserver.compression_util import ENCODINGS
+from webserver.enc_socket import EncryptedSocket
 from webserver.sitescript import load_script_file
 
 LOG = logging.getLogger()
@@ -52,7 +53,7 @@ class WebRequest:
         self._recv_headers: CaseInsensitiveDict[str] = CaseInsensitiveDict()
         self._recv_body: bytes | None = None
         self._get_args: dict[str, Any] = {}
-        self._conn = conn
+        self._conn = EncryptedSocket(conn)
         self._addr = addr
         self._args = args
 
@@ -131,7 +132,7 @@ class WebRequest:
         self._send_body(*response.body())
 
         LOG.info(
-            f"{response.code()} [{response.msg()}] for {self.path} from {self._conn.getpeername()[0]} [{self.version}]"
+            f"{response.code()} [{response.msg()}] for {self.path} from {self._conn.sock().getpeername()[0]} [{self.version}]"
         )
 
     def _send_header(self, key: str, value: str) -> None:
