@@ -10,7 +10,9 @@ from urllib.parse import unquote
 from locations import PUBLIC
 from utils import CaseInsensitiveDict, dumpb, mime_by_ext
 from webserver.compression_util import ENCODINGS
-from webserver.enc_socket import EncryptedSocket
+from encryption.dh_key_ex import DHServer
+from encryption.enc_socket import EncryptedSocket
+from encryption.encryption import AesEncryption, Encryption
 from webserver.sitescript import load_script_file
 
 LOG = logging.getLogger()
@@ -41,6 +43,9 @@ class WebResponse(ABC):
     def body(self) -> tuple[bytes, str]:
         return self._body
 
+    def __str__(self) -> str:
+        return f"<WebResponse code={self._code} msg={self._msg}>"
+
 
 class WebRequest:
     def __init__(
@@ -63,6 +68,7 @@ class WebRequest:
         while (c := self._conn.recv(1)) != b"\n":
             buff.append(c)
 
+        LOG.debug("Read line")
         return (b"".join(buff) + b"\n").decode(errors="ignore")
 
     def read_headers(self) -> None:
@@ -72,7 +78,7 @@ class WebRequest:
         self._parse_status(status)
 
         try:
-            while len(LINE := self._read_line()) > 0:
+            while len(LINE := self._read_line().strip()) > 0:
                 s = LINE.strip().split(": ")
                 if len(s) > 1:
                     key = s.pop(0)
@@ -82,11 +88,15 @@ class WebRequest:
         except IndexError:
             pass
 
+        LOG.debug("Read finished for headers")
+
         METHOD = self.method.lower()  # type: ignore | self.method is never none here, because of the self._parse_status(...) call
         if METHOD == "post" or METHOD == "put":
             self._read_body()
+            LOG.debug("Read finished for body")
 
     def _parse_status(self, status: list[str]) -> None:
+        LOG.debug("Request for %s", str(status))
         self.method = status.pop(0)
         gargs = status.pop(0).split("?", 1)
         self.version = " ".join(status).strip()
@@ -123,6 +133,9 @@ class WebRequest:
             message (str): The status message of the response
         """
 
+        LOG.info(
+            f"{response.code()} [{response.msg()}] for {self.path} from {self._conn.sock().getpeername()[0]} [{self.version}]"
+        )
         self._conn.send(f"{self.version} {response.code()} {response.msg()}\n".encode())
         self._default_headers()
 
@@ -130,10 +143,6 @@ class WebRequest:
             self._send_header(k, v)
 
         self._send_body(*response.body())
-
-        LOG.info(
-            f"{response.code()} [{response.msg()}] for {self.path} from {self._conn.sock().getpeername()[0]} [{self.version}]"
-        )
 
     def _send_header(self, key: str, value: str) -> None:
         """Send one header
@@ -273,6 +282,7 @@ class WebRequest:
             self._send_response(WebResponse(400, "NO_METHOD_OR_PATH"))
             return
 
+        LOG.debug("Evaluate method")
         match self.method.lower():
             case "get":
                 rs = self.do_GET()
@@ -280,6 +290,8 @@ class WebRequest:
                 rs = self.do_POST()
             case "options":
                 rs = self.do_OPTIONS()
+            case "secure":
+                return self.do_SECURE()
             case _:
                 LOG.debug("Unknown method [%s]", self.method.lower())
                 rs = WebResponse(405, "METHOD_NOT_ALLOWED")
@@ -360,6 +372,23 @@ class WebRequest:
             status_msg="OPTIONS",
             headers={"Allow": "GET, POST, OPTIONS"},
         )
+
+    def do_SECURE(self) -> None:
+        # Perform the DH Key Exchange
+        LOG.debug("Got secure request")
+
+        dh = DHServer()
+        dh.read_e(int(self._recv_headers["DH-E"]))
+        self._send_response(WebResponse(101, "OK", headers={"DH-F": str(dh.get_f())}))
+
+        # Create the encryption
+        key = dh.make_enc_key(AesEncryption.key_len())
+        iv = dh.make_iv_str(AesEncryption.iv_len())
+        self._conn.update_encryption(AesEncryption(key, iv))
+
+        # Read the actual encrypted HTTP request
+        self.read_headers()
+        self.evaluate()
 
     def _default_headers(self) -> None:
         """Default headers appended to every response"""

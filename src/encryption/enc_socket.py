@@ -1,7 +1,10 @@
+import logging
 import os
 import socket
 
-from webserver.encryption import Encryption, NoEncryption
+from encryption.encryption import Encryption, NoEncryption
+
+LOG = logging.getLogger()
 
 
 class EncryptedSocket:

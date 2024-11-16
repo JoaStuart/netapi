@@ -29,6 +29,14 @@ class NoEncryption(Encryption):
 
 
 class AesEncryption(Encryption):
+    @staticmethod
+    def key_len() -> int:
+        return 32
+
+    @staticmethod
+    def iv_len() -> int:
+        return 16
+
     def __init__(self, key: bytes, iv: bytes) -> None:
         self._aes = algorithms.AES256(key)
         self._cipher = Cipher(algorithm=self._aes, mode=modes.CBC(iv))
