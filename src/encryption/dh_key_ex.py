@@ -12,17 +12,51 @@ class DHAlgorithm:
         self._K: int | None = None
 
     def make_enc_key(self, length: int) -> bytes:
+        """Makes the encryption key to be used in further conversation
+
+        Args:
+            length (int): The length of key required
+
+        Returns:
+            bytes: The generated key
+        """
+
         return self._make_crypt_str(b"KEY", length)
 
     def make_iv_str(self, length: int) -> bytes:
+        """Makes the IV string to be used in further conversation
+
+        Args:
+            length (int): The length of IV required
+
+        Returns:
+            bytes: The generated IV string
+        """
+
         return self._make_crypt_str(b"IVS", length)
 
-    def _make_crypt_str(self, id: bytes, length: int, append: bytes = b"") -> bytes:
+    def _make_crypt_str(self, id: bytes, length: int) -> bytes:
+        """Makes a crypto key using the exchanged `K` using the id and length
+
+        Args:
+            id (bytes): The ID of the string to generate
+            length (int): The length of data to return. Maximum 32 bytes.
+
+        Raises:
+            ValueError: When the key exchange has not yet been performed or the length is more than maximum
+
+        Returns:
+            bytes: The generated crypto key
+        """
+
         if self._K is None:
             raise ValueError("You need to exchange keys first")
+        if length > 32:
+            raise ValueError("The requested length is too long")
 
+        # Hashes `K`(binary) + `ID`
         h_data = hashlib.sha256(
-            self._K.to_bytes(length=(self._K.bit_length() + 7) // 8) + id + append
+            self._K.to_bytes(length=(self._K.bit_length() + 7) // 8) + id
         ).digest()
 
         return h_data[:length]
@@ -35,9 +69,19 @@ class DHServer(DHAlgorithm):
         self._y = random.randint(1, self._q - 1)
 
     def read_e(self, e: int) -> None:
+        """
+        Args:
+            e (int): Value of `e` sent by the client
+        """
+
         self._K = (e ^ self._y) % self._p
 
     def get_f(self) -> int:
+        """
+        Returns:
+            int: The local value of `f`
+        """
+
         return (self._g ^ self._y) % self._p
 
 
@@ -48,7 +92,17 @@ class DHClient(DHAlgorithm):
         self._x = random.randint(2, self._q - 1)
 
     def read_f(self, f: int):
+        """
+        Args:
+            f (int): Value of `f` sent by the server
+        """
+
         self._K = (f ^ self._x) % self._p
 
     def get_e(self) -> int:
+        """
+        Returns:
+            int: The local value of `e`
+        """
+
         return (self._g ^ self._x) % self._p
