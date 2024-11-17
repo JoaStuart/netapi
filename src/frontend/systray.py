@@ -5,7 +5,7 @@ import pystray
 from PIL import Image
 
 import locations
-from utils import CleanUp
+from types.cleanup import CleanUp
 
 
 class SysTray(CleanUp):

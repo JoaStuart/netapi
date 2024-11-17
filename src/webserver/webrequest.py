@@ -8,7 +8,8 @@ from typing import Any, Type
 from urllib.parse import unquote
 
 from locations import PUBLIC
-from utils import CaseInsensitiveDict, dumpb, mime_by_ext
+from types.ci_dict import CaseInsensitiveDict
+from utils import dumpb, mime_by_ext
 from webserver.compression_util import ENCODINGS
 from webserver.sitescript import load_script_file
 from webserver.socketrequest import SocketRequest

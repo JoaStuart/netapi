@@ -14,7 +14,9 @@ import requests
 import config
 from locations import VERSION
 import locations
-from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
+from types.ci_dict import CaseInsensitiveDict
+from types.cleanup import CleanUp
+from utils import dumpb, get_os_name
 from webserver.webrequest import WebResponse
 
 from typing import TYPE_CHECKING

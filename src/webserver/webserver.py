@@ -5,7 +5,7 @@ from threading import Thread
 from time import sleep
 from typing import Any, Type
 
-from utils import CleanUp
+from types.cleanup import CleanUp
 from webserver.webrequest import WebRequest
 
 LOG = logging.getLogger()

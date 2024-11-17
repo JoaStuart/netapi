@@ -14,7 +14,7 @@ from frontend.multicast_cli import MulticastClient
 from locations import VERSION
 import config
 import locations
-from utils import CleanUp
+from types.cleanup import CleanUp
 from webserver.webserver import WebServer
 
 

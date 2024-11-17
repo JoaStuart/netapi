@@ -4,7 +4,7 @@ import socket
 import hashlib
 import logging
 import threading
-from utils import CaseInsensitiveDict
+from types.ci_dict import CaseInsensitiveDict
 
 log = logging.getLogger()
 
