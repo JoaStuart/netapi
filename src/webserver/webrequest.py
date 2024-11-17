@@ -25,23 +25,33 @@ class WebResponse(ABC):
         status_msg: str = "NOT_IMPLEMENTED",
         headers: dict[str, str] = {},
         body: tuple[bytes, str] = (b"", "text/plain"),
+        keep_alive: bool = False,
     ) -> None:
         self._code = status_code
         self._msg = status_msg
         self._headers = headers
         self._body = body
+        self._keep_alive = keep_alive
 
+    @property
     def code(self) -> int:
         return self._code
 
+    @property
     def msg(self) -> str:
         return self._msg
 
+    @property
     def headers(self) -> dict[str, str]:
         return self._headers
 
+    @property
     def body(self) -> tuple[bytes, str]:
         return self._body
+
+    @property
+    def keep_alive(self) -> bool:
+        return self._keep_alive
 
     def __str__(self) -> str:
         return f"<WebResponse code={self._code} msg={self._msg}>"
@@ -68,7 +78,6 @@ class WebRequest:
         while (c := self._conn.recv(1)) != b"\n":
             buff.append(c)
 
-        LOG.debug("Read line")
         return (b"".join(buff) + b"\n").decode(errors="ignore")
 
     def read_headers(self) -> None:
@@ -88,12 +97,9 @@ class WebRequest:
         except IndexError:
             pass
 
-        LOG.debug("Read finished for headers")
-
         METHOD = self.method.lower()  # type: ignore | self.method is never none here, because of the self._parse_status(...) call
         if METHOD == "post" or METHOD == "put":
             self._read_body()
-            LOG.debug("Read finished for body")
 
     def _parse_status(self, status: list[str]) -> None:
         LOG.debug("Request for %s", str(status))
@@ -122,7 +128,7 @@ class WebRequest:
                 con_len = int(self._recv_headers["Content-Length"])
                 self._recv_body = self._conn.recv(con_len)
         except TypeError:
-            LOG.debug("Browser sent non-int Content-Length")
+            LOG.warning("Browser sent non-int Content-Length")
             self._send_response(WebResponse(400, "NON_INT_CONTENT_LENGTH"))
 
     def _send_response(self, response: WebResponse) -> None:
@@ -134,15 +140,15 @@ class WebRequest:
         """
 
         LOG.info(
-            f"{response.code()} [{response.msg()}] for {self.path} from {self._conn.sock().getpeername()[0]} [{self.version}]"
+            f"{response.code} [{response.msg}] for {self.path} from {self._conn.sock().getpeername()[0]} [{self.version}]"
         )
-        self._conn.send(f"{self.version} {response.code()} {response.msg()}\n".encode())
+        self._conn.send(f"{self.version} {response.code} {response.msg}\n".encode())
         self._default_headers()
 
-        for k, v in response.headers().items():
+        for k, v in response.headers.items():
             self._send_header(k, v)
 
-        self._send_body(*response.body())
+        self._send_body(*response.body, response.keep_alive)
 
     def _send_header(self, key: str, value: str) -> None:
         """Send one header
@@ -159,7 +165,9 @@ class WebRequest:
 
         self._conn.send(b"\n")
 
-    def _send_body(self, body: bytes, c_type: str = "plain/text") -> None:
+    def _send_body(
+        self, body: bytes, c_type: str = "plain/text", keep_alive: bool = False
+    ) -> None:
         """Send the body of the request
 
         Args:
@@ -169,7 +177,9 @@ class WebRequest:
 
         if len(body) == 0:
             self._end_headers()
-            self._conn.close()
+            self._conn.flush()
+            if not keep_alive:
+                self._conn.close()
             return
 
         self._send_header("Content-Type", c_type)
@@ -179,7 +189,9 @@ class WebRequest:
         self._end_headers()
 
         self._conn.send(compressed)
-        self._conn.close()
+        self._conn.flush()
+        if not keep_alive:
+            self._conn.close()
 
     def _compress_body(self, orig: bytes) -> bytes:
         """Tries to compress the body using the encodings provided in the request
@@ -282,7 +294,6 @@ class WebRequest:
             self._send_response(WebResponse(400, "NO_METHOD_OR_PATH"))
             return
 
-        LOG.debug("Evaluate method")
         match self.method.lower():
             case "get":
                 rs = self.do_GET()
@@ -293,7 +304,7 @@ class WebRequest:
             case "secure":
                 return self.do_SECURE()
             case _:
-                LOG.debug("Unknown method [%s]", self.method.lower())
+                LOG.warning("Unknown method [%s]", self.method.lower())
                 rs = WebResponse(405, "METHOD_NOT_ALLOWED")
 
         self._send_response(rs)
@@ -322,7 +333,7 @@ class WebRequest:
             return body
 
         # Either JSONDecodeError or UnicodeDecodeError hit
-        LOG.debug(
+        LOG.info(
             "Could not decode body of type: %s",
             self._recv_headers.get("Content-Type", None),
         )
@@ -375,11 +386,14 @@ class WebRequest:
 
     def do_SECURE(self) -> None:
         # Perform the DH Key Exchange
-        LOG.debug("Got secure request")
 
         dh = DHServer()
         dh.read_e(int(self._recv_headers["DH-E"]))
-        self._send_response(WebResponse(101, "OK", headers={"DH-F": str(dh.get_f())}))
+        self._send_response(
+            WebResponse(
+                101, "SECURE", headers={"DH-F": str(dh.get_f())}, keep_alive=True
+            )
+        )
 
         # Create the encryption
         key = dh.make_enc_key(AesEncryption.key_len())

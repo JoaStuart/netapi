@@ -1,5 +1,6 @@
 from enum import Enum
 import json
+import logging
 import socket
 from typing import Any
 
@@ -8,6 +9,8 @@ from encryption.enc_socket import EncryptedSocket
 from encryption.encryption import AesEncryption
 import locations
 from webclient.client_response import ClientResponse
+
+LOG = logging.getLogger()
 
 
 class WebMethod(Enum):
@@ -115,9 +118,11 @@ class WebClient:
                 ]
             ).encode()
         )
+        sock.flush()
 
         secure_resp = ClientResponse(sock, False)
         dh.read_f(int(str(secure_resp.get_header("DH-F"))))
+        LOG.debug("Finished SECURE handshake with %s, changing encryption", self._ip)
 
         sock.update_encryption(
             AesEncryption(
@@ -142,9 +147,17 @@ class WebClient:
         if has_body:
             # Ignore warning for self._data maybe being None,
             # because it gets set in the IF statement above
-            sock.sendall(self._data[0])  # type: ignore
+            sock.send(self._data[0])  # type: ignore
+        sock.flush()
 
     def send(self) -> ClientResponse:
+        LOG.debug(
+            "Sending request of %s %s to %s:%d",
+            self._method.value,
+            self._path,
+            self._ip,
+            self._port,
+        )
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.connect((self._ip, self._port))

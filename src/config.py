@@ -40,7 +40,7 @@ def load_var(path: str) -> Any | None:
         for p in path.split("."):
             data = data[p]
     except Exception:
-        LOG.exception("Exception loading variable from config")
+        LOG.exception("Exception loading `%s` from config", path)
         return None
 
     return data

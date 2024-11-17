@@ -1,10 +1,7 @@
-import logging
 import os
 import socket
 
 from encryption.encryption import Encryption, NoEncryption
-
-LOG = logging.getLogger()
 
 
 class EncryptedSocket:
@@ -26,45 +23,36 @@ class EncryptedSocket:
         elif size == 0:
             return b""
 
-        # Check if enough data is already in the buffer
-        if len(self._recv_buff) >= size:
-            data, self._recv_buff = self._recv_buff[:size], self._recv_buff[size:]
-            return data
-
-        # Not enough data in buffer
         data = self._recv_buff
-        size -= len(self._recv_buff)
-        self._recv_buff = b""
+        block_size = self.block_size()
 
-        # Receive data until
-        while size > 0:
-            data_enc = self._socket.recv(self.block_size())
-            new_data = self._encryption.decrypt(data_enc)
-
-            if len(new_data) >= size:
-                data += new_data[:size]
-                self._recv_buff = new_data[size:]
+        while len(data) < size:
+            encrypted_block = self._socket.recv(block_size)
+            if not encrypted_block:
                 break
-            else:
-                data += new_data
-                size -= len(new_data)
 
-        return data
+            decrypted_block = self._encryption.decrypt(encrypted_block)
+            data += decrypted_block
+
+        self._recv_buff, return_data = data[size:], data[:size]
+        return return_data
 
     def send(self, data: bytes) -> None:
         data = self._send_buff + data
+        block_size = self.block_size()
 
-        largest_block = (len(data) // self.block_size()) * self.block_size()
+        largest_block = (len(data) // block_size) * block_size
 
-        self._socket.sendall(self._encryption.encrypt(data[:largest_block]))
+        if largest_block > 0:
+            self._socket.sendall(self._encryption.encrypt(data[:largest_block]))
+
         self._send_buff = data[largest_block:]
 
     def flush(self) -> None:
-        padding_needed = (
-            self.block_size() - len(self._send_buff) % self.block_size()
-        ) % self.block_size()
+        block_size = self.block_size()
 
-        data = self._send_buff + b"\0" * padding_needed
+        padding_needed = (block_size - len(self._send_buff) % block_size) % block_size
+        data = self._send_buff + b"\0" * padding_needed  # Pad with null bytes
         self._send_buff = b""
 
         self._socket.sendall(self._encryption.encrypt(data))

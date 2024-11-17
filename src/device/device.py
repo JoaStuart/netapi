@@ -17,7 +17,7 @@ import config
 from locations import VERSION
 import locations
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
-from webclient.client_request import WebClient
+from webclient.client_request import WebClient, WebMethod
 from webserver.webrequest import WebResponse
 
 from typing import TYPE_CHECKING
@@ -134,7 +134,9 @@ class Device:
         """
 
         if "subdevices" not in body:
-            LOG.debug("SubDevices not in body")
+            LOG.warning("SubDevices not in body")
+            raise ValueError("Client must send Subdevices")
+
         self.load_subdevs(body["subdevices"])
         for k in body.get("funcs", []):
             self.append_local_fun(k)
@@ -219,6 +221,7 @@ class Device:
 
         resp = (
             WebClient(self._ip, DEV_PORT)
+            .set_method(WebMethod.POST)
             .set_path(f"/{".".join(fargs)}")
             .set_secure(True)
             .set_json(body)
@@ -270,6 +273,7 @@ class FrontendDevice(CleanUp):
 
         resp = (
             WebClient(self._ip, DEV_PORT)
+            .set_method(WebMethod.POST)
             .set_path("/login")
             .set_secure(True)
             .set_json(
@@ -311,7 +315,7 @@ class FrontendDevice(CleanUp):
 
         restart()
 
-    def _action_client(self, *actions: str) -> WebClient:
+    def _action_client(self, actions: str) -> WebClient:
         """Generates a WebClient to perform these actions
 
         Returns:
@@ -320,7 +324,7 @@ class FrontendDevice(CleanUp):
 
         return (
             WebClient(self._ip, DEV_PORT)
-            .set_path(f"/{"/".join(actions)}")
+            .set_path(actions)
             .set_secure(True)
             .authorize(self._token)
         )

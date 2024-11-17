@@ -45,7 +45,40 @@ class AesEncryption(Encryption):
         return self._aes.block_size // 8
 
     def encrypt(self, data: bytes) -> bytes:
-        return self._cipher.encryptor().update(data)
+        """Encrypts the data, while using a different encryptor for each chunk
+
+        Args:
+            data (bytes): The data to be encrypted, must be full block(s)
+
+        Returns:
+            bytes: The encrypted data
+        """
+        encrypted_data = b""
+
+        for i in range(0, len(data), self.block_size()):
+            chunk = data[i : i + self.block_size()]
+
+            encryptor = self._cipher.encryptor()
+            encrypted_data += encryptor.update(chunk) + encryptor.finalize()
+
+        return encrypted_data
 
     def decrypt(self, data: bytes) -> bytes:
-        return self._cipher.decryptor().update(data)
+        """Decrypts the data, while using a different decryptor for each chunk
+
+        Args:
+            data (bytes): The data to be decrypted, must be full block(s)
+
+        Returns:
+            bytes: The decrypted data
+        """
+
+        decrypted_data = b""
+
+        for i in range(0, len(data), self.block_size()):
+            chunk = data[i : i + self.block_size()]
+
+            decryptor = self._cipher.decryptor()
+            decrypted_data += decryptor.update(chunk) + decryptor.finalize()
+
+        return decrypted_data

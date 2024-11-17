@@ -5,7 +5,7 @@ import zipfile
 
 LOG = logging.getLogger()
 
-VERSION = 0.5
+VERSION = 0.55
 
 SRC = os.path.dirname(__file__)
 ROOT = os.path.join(SRC, "..")
@@ -137,7 +137,7 @@ dirtree = ZipDir(
             [ZipFile("favicon.ico", "favicon.ico")],
         ),
         ZipLiveDir("src"),
-        ZipFile("config.json"),
+        ZipFile("config.json", "_config.json"),
         ZipFile("run.sh"),
         ZipFile("run.bat"),
         ZipFile("runw.bat"),

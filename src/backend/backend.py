@@ -243,10 +243,10 @@ class BackendRequest(WebRequest):
             self._check_permissions(50, fargs)
 
             resp = device.call_local_fun(fargs, body, self._recv_headers)
-            self.code = (resp.code(), resp.msg())
-            self.headers |= resp.headers()
+            self.code = (resp.code, resp.msg)
+            self.headers |= resp.headers
             if isinstance(self.response, dict):
-                data, tpe = resp.body()
+                data, tpe = resp.body
                 if tpe.lower() == "application/json":
                     jdta = json.loads(data)
                     self.response |= jdta
