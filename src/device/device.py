@@ -1,7 +1,9 @@
 import base64
 import gzip
 from io import BytesIO
+import json
 import logging
+import traceback
 from typing import Any, NoReturn
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
@@ -15,6 +17,7 @@ import config
 from locations import VERSION
 import locations
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
+from webclient.client_request import WebClient, WebMethod
 from webserver.webrequest import WebResponse
 
 from typing import TYPE_CHECKING
@@ -120,38 +123,6 @@ class Device:
 
         return bytes.fromhex(hextoken.strip()) == self._token
 
-    def load_pub_key(self, key: str):
-        """Loads the public key of the opponent
-
-        Args:
-            key (str): Key in a PEM string format
-        """
-
-        decomp = Device.decompress(key)
-        pkey = serialization.load_pem_public_key(decomp)
-        if isinstance(pkey, rsa.RSAPublicKey):
-            self._pub_key = pkey
-
-    def get_enc_token(self) -> str:
-        """
-        Returns:
-            str: Token for the device in an key-encoded format
-        """
-
-        if self._pub_key == None:
-            return ""
-
-        return Device.compress(
-            self._pub_key.encrypt(
-                self._token.hex().encode(),
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None,
-                ),
-            )
-        )
-
     def login(self, body: dict[str, Any]) -> WebResponse:
         """Try to login the current device from a post-body provided in the login API call
 
@@ -162,36 +133,28 @@ class Device:
             WebResponse: The response to forward to the opponent
         """
 
-        try:
-            if "key" not in body:
-                LOG.debug("Key not in body")
-            self.load_pub_key(body["key"])
-            if "subdevices" not in body:
-                LOG.debug("SubDevices not in body")
-            self.load_subdevs(body["subdevices"])
-            for k in body.get("funcs", []):
-                self.append_local_fun(k)
+        if "subdevices" not in body:
+            LOG.warning("SubDevices not in body")
+            raise ValueError("Client must send Subdevices")
 
-            self._version = body.get("version", 0.0)
-            self._os = body.get("os", "Unknown")
+        self.load_subdevs(body["subdevices"])
+        for k in body.get("funcs", []):
+            self.append_local_fun(k)
 
-            return WebResponse(
-                200,
-                "LOGGED_IN",
-                body=dumpb(
-                    {
-                        "message": "Device logged in",
-                        "token": self.get_enc_token(),
-                        "update": VERSION > body.get("version", 0),
-                    }
-                ),
-            )
-        except:
-            return WebResponse(
-                400,
-                "BAD_BODY",
-                body=dumpb({"message": "Body has bad content"}),
-            )
+        self._version = body.get("version", 0.0)
+        self._os = body.get("os", "Unknown")
+
+        return WebResponse(
+            200,
+            "LOGGED_IN",
+            body=dumpb(
+                {
+                    "message": "Device logged in",
+                    "token": self._token.hex(),
+                    "update": VERSION > body.get("version", 0),
+                }
+            ),
+        )
 
     def check_token(self, hdr: str) -> "PermissionLevel | None":
         """Checks if the provided token is valid for this device
@@ -242,7 +205,7 @@ class Device:
             recv_headers (CaseInsensitiveDict[str]): The headers sent from the requesting device
 
         Returns:
-            tuple[tuple[int, str], dict[str, str], tuple[bytes, str]]: The response from the frontend device
+            WebResponse: The response from the frontend device
         """
 
         if not self.has_local_fun(fargs[0]):
@@ -256,30 +219,28 @@ class Device:
                 200, "LOGOUT", body=dumpb({"message": "Logout successful!"})
             )
 
-        r = requests.post(
-            f"http://{self._ip}:{DEV_PORT}/{".".join(fargs)}",
-            data=dumpb(body)[0],
-            headers={"Content-Type": "application/json", "User-Agent": "JoaNetAPI"},
+        resp = (
+            WebClient(self._ip, DEV_PORT)
+            .set_method(WebMethod.POST)
+            .set_path(f"/{".".join(fargs)}")
+            .set_secure(True)
+            .set_json(body)
+            .send()
         )
 
         return WebResponse(
-            r.status_code,
-            r.reason,
-            dict(r.headers),
-            (r.content, r.headers.get("Content-Type", "application/octet-stream")),
+            resp.code,
+            resp.msg,
+            resp.headers,
+            (resp.body, resp.get_header("Content-Type") or "application/octet-stream"),
         )
 
     def close(self) -> None:
         """Sends a close request to the frontend device"""
 
-        try:
-            requests.get(
-                f"http://{self._ip}:{DEV_PORT}/close",
-                headers={"User-Agent": "JoaNetAPI"},
-                timeout=0.1,
-            ).close()
-        except Exception:
-            LOG.exception("Failed close request for %s", self._ip)
+        WebClient(self._ip, DEV_PORT).set_path("/close").set_secure(True).set_timeout(
+            0.1
+        ).send()
 
     def logout(self) -> None:
         """Method called upon recieving of a logout request
@@ -293,10 +254,6 @@ class Device:
 
 class FrontendDevice(CleanUp):
     def __init__(self, ip: str) -> None:
-        self._priv_key: rsa.RSAPrivateKey = rsa.generate_private_key(
-            public_exponent=65537, key_size=KEY_SIZE
-        )
-        self._pub_key: rsa.RSAPublicKey = self._priv_key.public_key()
         self._token: str | None = None
         self._ip: str = ip
 
@@ -311,40 +268,29 @@ class FrontendDevice(CleanUp):
         """
         from frontend.frontend import FFUNCS
 
-        pem: bytes = self._pub_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.PKCS1,
-        )
         funcs = [k for k in FFUNCS.keys()]
         LOG.debug(f"Sending funcs: {funcs}")
 
-        r = requests.post(
-            f"http://{self._ip}:{DEV_PORT}/login",
-            headers={"Content-Type": "application/json"},
-            data=dumpb(
+        resp = (
+            WebClient(self._ip, DEV_PORT)
+            .set_method(WebMethod.POST)
+            .set_path("/login")
+            .set_secure(True)
+            .set_json(
                 {
-                    "key": Device.compress(pem),
                     "funcs": funcs,
                     "subdevices": config.load_var("subdevices"),
                     "version": version,
                     "os": get_os_name(),
                 }
-            )[0],
+            )
+            .send()
         )
 
-        if not r.ok:
+        if resp.code != 200:
             raise Exception("Login failed!")
 
-        b = r.json()
-        tok = Device.decompress(b["token"])
-        self._token = self._priv_key.decrypt(
-            tok,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None,
-            ),
-        ).decode()
+        b = json.loads(resp.body)
 
         if b.get("update", False):
             self._update()
@@ -353,15 +299,15 @@ class FrontendDevice(CleanUp):
         """Downloads the latest packed sources and updates"""
 
         LOG.info("Starting update")
-        dl = requests.get(self._action_url("pack.zip"), headers=self.authorize())
+        dl = WebClient(self._ip, DEV_PORT).set_path("/pack.zip").send()
 
-        if not dl.ok:
+        if dl.code != 200:
             LOG.warning(
-                f"Update failed because of content download response {dl.status_code}: {dl.reason}"
+                f"Update failed because of content download response {dl.code}: {dl.msg}"
             )
             return
 
-        zbinary = BytesIO(dl.content)
+        zbinary = BytesIO(dl.body)
         locations.unpack(zbinary)
 
         LOG.info("Finished update, restarting...")
@@ -369,27 +315,21 @@ class FrontendDevice(CleanUp):
 
         restart()
 
-    def authorize(self) -> dict[str, str]:
-        """
-        Returns:
-            dict[str, str]: A header dict including the `Authorization` header needed for this device
-        """
-
-        return {"Authorization": f"BEARER {self._token}"}
-
-    def _action_url(self, *actions: str) -> str:
-        """Generates the URL for the provided actions
+    def _action_client(self, actions: str) -> WebClient:
+        """Generates a WebClient to perform these actions
 
         Returns:
-            str: URL to request for actions to be taken
+            WebClient: The WebClient with all configurations set
         """
 
-        return f"http://{self._ip}:{DEV_PORT}/{"/".join(actions)}"
+        return (
+            WebClient(self._ip, DEV_PORT)
+            .set_path(actions)
+            .set_secure(True)
+            .authorize(self._token)
+        )
 
     def cleanup(self) -> None:
-        r = requests.get(
-            self._action_url("logout"),
-            headers=self.authorize(),
-        )
-        if not r.ok:
+        resp = self._action_client("/logout").send()
+        if resp.code != 200:
             LOG.warning("Logout did not succeed!")
