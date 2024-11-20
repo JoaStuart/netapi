@@ -1,11 +1,12 @@
 import logging
 import os
 import sys
+import threading
 import time
 
 import locations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 if TYPE_CHECKING:
     from device.device import FrontendDevice
@@ -85,3 +86,20 @@ def append_http_logger(backend_ip: str, port: int, device: "FrontendDevice") -> 
     http_logger.setLevel(logging.WARNING)
     http_logger.setFormatter(_log_formatter)
     LOG.addHandler(http_logger)
+
+
+def logged_thread(
+    name: str = "Thread",
+    target: Callable[..., object] | None = None,
+    args: Iterable[Any] = (),
+    daemon: bool = True,
+) -> threading.Thread:
+    def logged_run(target, args) -> None:
+        try:
+            target(*args)
+        except Exception:
+            LOG.exception("Caught exception at thread root:")
+
+    return threading.Thread(
+        target=logged_run, args=(target, args), name=name, daemon=daemon
+    )

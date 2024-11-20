@@ -8,6 +8,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
 import locations
+from log import logged_thread
 
 
 class MulticastServer:
@@ -97,7 +98,7 @@ class MulticastServer:
     def background_listen(self) -> None:
         """Starts a background thread listening to Multicast searches"""
 
-        Thread(target=self._listen, name="SSDP", daemon=True).start()
+        logged_thread(target=self._listen, name="SSDP", daemon=True).start()
 
     def _listen(self) -> None:
         """Target method of listening thread"""

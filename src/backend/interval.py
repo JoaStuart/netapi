@@ -2,6 +2,8 @@ import time
 from typing import Callable
 from threading import Thread
 
+from log import logged_thread
+
 
 class Schedule:
     _schedules: list["Schedule"] = []
@@ -18,7 +20,9 @@ class Schedule:
 
     @staticmethod
     def start_scheduler() -> None:
-        Thread(target=Schedule._tick_all, name="Intervalometer", daemon=True).start()
+        logged_thread(
+            target=Schedule._tick_all, name="Intervalometer", daemon=True
+        ).start()
 
     @staticmethod
     def _tick_all() -> None:

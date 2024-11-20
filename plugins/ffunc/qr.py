@@ -5,10 +5,10 @@ import numpy as np
 import tkinter as tk
 import pyperclip
 import pyzbar.pyzbar
-from threading import Thread
 from tkinter import messagebox
 
 from device.api import APIFunct
+from log import logged_thread
 
 
 class ScreenQR(APIFunct):
@@ -30,7 +30,7 @@ class ScreenQR(APIFunct):
                     code_list.append(data)
 
         if len(self.args) > 0 and self.args[0] == "prompt":
-            Thread(target=self.ask_all_links, args=(code_list,)).start()
+            logged_thread(target=self.ask_all_links, args=(code_list,)).start()
 
         return {
             "qr": code_list,

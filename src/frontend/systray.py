@@ -1,10 +1,10 @@
 import os
-from threading import Thread
 from typing import NoReturn, Callable
 import pystray
 from PIL import Image
 
 import locations
+from log import logged_thread
 from utils import CleanUp
 
 
@@ -26,7 +26,7 @@ class SysTray(CleanUp):
         )
 
     def start(self) -> None:
-        Thread(target=self._tray.run, daemon=True).start()
+        logged_thread(target=self._tray.run, daemon=True).start()
 
     def _load_icon(self):
         self._icon = Image.open(os.path.join(locations.PUBLIC, "favicon.ico"))

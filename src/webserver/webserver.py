@@ -8,7 +8,7 @@ from typing import Any, Type
 from utils import CleanUp
 from webserver.webrequest import WebRequest
 
-from log import LOG
+from log import LOG, logged_thread
 
 
 class WebServer(CleanUp):
@@ -34,7 +34,7 @@ class WebServer(CleanUp):
     def start(self) -> None:
         """Start the server in a background thread"""
 
-        Thread(
+        logged_thread(
             target=self.start_blocking,
             daemon=True,
             name="Listener",
@@ -67,7 +67,7 @@ class WebServer(CleanUp):
             request.read_headers()
 
             if file := request.has_public():
-                Thread(
+                logged_thread(
                     target=request.send_page,
                     args=(file,),
                     daemon=True,
@@ -75,7 +75,9 @@ class WebServer(CleanUp):
                 ).start()
                 return
 
-            Thread(target=request.evaluate, daemon=True, name="RequestHTTP").start()
+            logged_thread(
+                target=request.evaluate, daemon=True, name="RequestHTTP"
+            ).start()
         except ConnectionAbortedError:
             LOG.debug("Connection Aborted by %s:%s", str(addr[0]), str(addr[1]))
         except Exception:

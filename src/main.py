@@ -174,4 +174,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception:
+        LOG.exception("Caught exception at project root:")
+        sys.exit(1)

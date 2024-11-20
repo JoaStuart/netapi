@@ -12,12 +12,13 @@ from ctypes import (
     byref,
     pointer,
 )
-from threading import Thread
 import traceback
 
 from device.api import APIFunct
+from log import logged_thread
 
 from ctypes import windll  # type: ignore    Linux does not know the `windll`
+
 
 user32 = windll.user32  # type: ignore       import because it only exists on
 kernel32 = windll.kernel32  # type: ignore   Windows. User is supposed to only
@@ -124,7 +125,7 @@ class DDC_CI(APIFunct):
         self.__poll_physical_monitors(hmon_list)
 
         if threaded:
-            Thread(target=self._poll_capabilities, daemon=True).start()
+            logged_thread(target=self._poll_capabilities, daemon=True).start()
         else:
             self._poll_capabilities()
 
@@ -143,7 +144,7 @@ class DDC_CI(APIFunct):
     def __poll_physical_monitors(self, hmon_list: list[int]) -> None:
         for hmon in hmon_list:
             num = c_ulong()
-            dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, pointer(num)),
+            dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, pointer(num))
 
             phy_mon = (PHYSICAL_MONITOR * num.value)()
             self._check(
