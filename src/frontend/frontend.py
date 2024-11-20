@@ -10,7 +10,7 @@ from locations import PL_FFUNC
 from utils import dumpb
 from webserver.webrequest import WebRequest, WebResponse
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 FFUNCS: dict[str, Type[APIFunct]] = api.load_dir(PL_FFUNC)

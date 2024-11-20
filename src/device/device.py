@@ -23,7 +23,7 @@ from webserver.webrequest import WebResponse
 from typing import TYPE_CHECKING
 
 
-LOG = logging.getLogger()
+from log import LOG
 
 KEY_SIZE = 2048
 DEV_PORT = 4001

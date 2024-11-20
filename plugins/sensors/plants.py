@@ -9,7 +9,7 @@ import config
 import locations
 import utils
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class Plants(Sensor):

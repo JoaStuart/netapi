@@ -12,7 +12,7 @@ import locations
 import utils
 
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class AutomationState(Enum):

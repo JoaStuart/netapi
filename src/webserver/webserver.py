@@ -8,7 +8,7 @@ from typing import Any, Type
 from utils import CleanUp
 from webserver.webrequest import WebRequest
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class WebServer(CleanUp):

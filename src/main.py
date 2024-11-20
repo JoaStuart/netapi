@@ -14,11 +14,11 @@ from frontend.multicast_cli import MulticastClient
 from locations import VERSION
 import config
 import locations
+from log import append_http_logger, init_logger
 from utils import CleanUp
 from webserver.webserver import WebServer
 
-
-LOG = logging.getLogger()
+from log import LOG
 
 CLEANUP_STACK: list[CleanUp] = []
 
@@ -36,36 +36,6 @@ def handle_cleanup(*args, **kwargs) -> NoReturn:
 
 for sig in [signal.SIGINT, signal.SIGTERM]:
     signal.signal(sig, handle_cleanup)
-
-
-def setup_logger(verbose: bool) -> None:
-    """Setup the logger for this project
-
-    Args:
-        verbose (bool): Whether verbose logging in enabled
-    """
-
-    logFormatter = logging.Formatter(
-        "%(asctime)s :: %(funcName)s<@>%(threadName)s [%(levelname)-1.1s] %(message)s",
-        "%Y-%m-%d %H:%M:%S",
-    )
-    LOG.setLevel(logging.DEBUG)
-
-    logPath = os.path.join(locations.ROOT, "logs")
-    logName = time.strftime("%Y-%m-%d %H-%M", time.localtime())
-
-    for i in os.listdir(logPath):
-        os.remove(os.path.join(logPath, i))
-
-    fileHandler = logging.FileHandler(os.path.join(logPath, f"{logName}.log"))
-    fileHandler.setLevel(logging.DEBUG)
-    fileHandler.setFormatter(logFormatter)
-    LOG.addHandler(fileHandler)
-
-    consoleHandler = logging.StreamHandler(sys.stdout)
-    consoleHandler.setLevel(logging.DEBUG if verbose else logging.INFO)
-    consoleHandler.setFormatter(logFormatter)
-    LOG.addHandler(consoleHandler)
 
 
 def restart() -> NoReturn:
@@ -142,6 +112,8 @@ def frontend() -> None | int:
         CLEANUP_STACK.remove(fdev)
         return 1
 
+    append_http_logger(ip, DEV_PORT, fdev)
+
     tray.update_icon(SysTray.CONNECTED)
     tray.handle_cleanup = handle_cleanup
 
@@ -183,7 +155,7 @@ def backend() -> None | int:
 def main() -> int:
     args = parse_args()
 
-    setup_logger(args.verbose)
+    init_logger(args.verbose)
     load_envvars()
 
     locations.make_dirs()

@@ -10,7 +10,7 @@ from encryption.encryption import AesEncryption
 import locations
 from webclient.client_response import ClientResponse
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class WebMethod(Enum):

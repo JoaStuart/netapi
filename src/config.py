@@ -4,8 +4,7 @@ import os
 from typing import Any
 from locations import ROOT
 
-
-LOG = logging.getLogger()
+from log import LOG
 
 
 def __load_json(path: str) -> dict:

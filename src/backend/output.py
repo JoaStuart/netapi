@@ -6,7 +6,7 @@ from device.pluginloader import load_plugins
 from locations import PL_OUTPUT
 
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class OutputDevice(ABC):

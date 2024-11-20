@@ -8,7 +8,7 @@ from backend.output import OutputDevice
 from device.pluginloader import load_plugins
 from locations import PL_SENSOR
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class Sensor(ABC):

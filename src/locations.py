@@ -3,7 +3,6 @@ import os
 from typing import IO
 import zipfile
 
-LOG = logging.getLogger()
 
 VERSION = 0.55
 

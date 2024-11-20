@@ -15,7 +15,7 @@ from encryption.enc_socket import EncryptedSocket
 from encryption.encryption import AesEncryption, Encryption
 from webserver.sitescript import load_script_file
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class WebResponse(ABC):

@@ -11,8 +11,7 @@ from backend.interval import Schedule
 import config
 from device.api import APIFunct
 import locations
-
-LOGGER = logging.getLogger()
+from log import LOG
 
 
 class Sky(APIFunct):
@@ -129,7 +128,7 @@ class Sky(APIFunct):
 
         cap = cv2.VideoCapture(self.CAMERA)
         if not cap.isOpened():
-            LOGGER.warning("Camera could not be opened!")
+            LOG.warning("Camera could not be opened!")
             return
 
         self._set_props(cap)
@@ -137,7 +136,7 @@ class Sky(APIFunct):
         result, image = cap.read()
 
         if not result:
-            LOGGER.warning("Image could not be taken")
+            LOG.warning("Image could not be taken")
             self.stop()
             return
 

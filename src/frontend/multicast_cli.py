@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 import locations
 
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class MulticastClient:

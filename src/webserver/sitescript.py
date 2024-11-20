@@ -7,7 +7,7 @@ import traceback
 from typing import Any, Type
 
 
-LOG = logging.getLogger()
+from log import LOG
 
 
 class SiteScript(ABC):
