@@ -59,6 +59,7 @@ class DHAlgorithm:
             self._K.to_bytes(length=(self._K.bit_length() + 7) // 8) + id
         ).digest()
 
+        print(f"K: {self._K}")
         return h_data[:length]
 
 
@@ -74,7 +75,8 @@ class DHServer(DHAlgorithm):
             e (int): Value of `e` sent by the client
         """
 
-        self._K = (e ^ self._y) % self._p
+        print(f"E: {e}")
+        self._K = pow(e, self._y, self._p)
 
     def get_f(self) -> int:
         """
@@ -82,7 +84,9 @@ class DHServer(DHAlgorithm):
             int: The local value of `f`
         """
 
-        return (self._g ^ self._y) % self._p
+        f = pow(self._g, self._y, self._p)
+        print(f"F: {f}")
+        return f
 
 
 class DHClient(DHAlgorithm):
@@ -97,7 +101,7 @@ class DHClient(DHAlgorithm):
             f (int): Value of `f` sent by the server
         """
 
-        self._K = (f ^ self._x) % self._p
+        self._K = pow(f, self._x, self._p)
 
     def get_e(self) -> int:
         """
@@ -105,4 +109,4 @@ class DHClient(DHAlgorithm):
             int: The local value of `e`
         """
 
-        return (self._g ^ self._x) % self._p
+        return pow(self._g, self._x, self._p)
