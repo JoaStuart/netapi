@@ -16,6 +16,7 @@ import requests
 import config
 from locations import VERSION
 import locations
+from proj_types.singleton import singleton
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
 from webclient.client_request import WebClient, WebMethod
 from webserver.webrequest import WebResponse
@@ -196,6 +197,7 @@ class Device:
         fargs: list[str],
         body: dict[str, Any],
         recv_headers: CaseInsensitiveDict[str],
+        perms: "PermissionLevel",
     ) -> WebResponse:
         """Call the provided function on the frontend device
 
@@ -203,6 +205,7 @@ class Device:
             fargs (list[str]): The arguments and function call to send
             body (dict[str, Any]): The body to send
             recv_headers (CaseInsensitiveDict[str]): The headers sent from the requesting device
+            perms (PermissionLevel): The current permission level of the requester
 
         Returns:
             WebResponse: The response from the frontend device
@@ -223,6 +226,7 @@ class Device:
             WebClient(self._ip, DEV_PORT)
             .set_method(WebMethod.POST)
             .set_path(f"/{".".join(fargs)}")
+            .add_header("Permissions", str(perms.int_level()))
             .set_secure(True)
             .set_json(body)
             .send()
@@ -252,6 +256,7 @@ class Device:
         pass
 
 
+@singleton
 class FrontendDevice(CleanUp):
     def __init__(self, ip: str) -> None:
         self._token: str | None = None
@@ -294,6 +299,8 @@ class FrontendDevice(CleanUp):
 
         if b.get("update", False):
             self._update()
+
+        self._token = b.get("token", None)
 
     def _update(self) -> None | NoReturn:
         """Downloads the latest packed sources and updates"""
