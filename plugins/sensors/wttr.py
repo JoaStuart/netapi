@@ -53,7 +53,7 @@ class Wttr(Sensor):
                     "alert": "ok",
                 }
             case _:
-                device.data = self.data
+                device.data["wttr"] = self.data
 
     def _ww_ico(self) -> str:
         if self.data == None:

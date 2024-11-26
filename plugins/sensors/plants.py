@@ -108,7 +108,7 @@ class Plants(Sensor):
             }
             return
 
-        device.data = {
+        device.data["plants"] = {
             "name": names,
             "score": min_score,
             "ok": all_ok,

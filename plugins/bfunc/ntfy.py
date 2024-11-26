@@ -15,4 +15,4 @@ class Ntfy(APIFunct):
             json=body,
         )
 
-        return {}
+        return {"ntfy": "Notification sent!"}

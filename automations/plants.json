@@ -4,8 +4,8 @@
   "frequency": 10800,
   "if": {
     "query": "/plants",
-    "$ok": "ok",
-    "$names": "critical",
+    "$ok": "plants.ok",
+    "$names": "plants.critical",
     "check": "not $ok"
   },
   "then": [
@@ -22,7 +22,7 @@
   ],
   "wait": {
     "query": "/plants.0",
-    "$ok": "ok",
+    "$ok": "plants.ok",
     "check": "$ok"
   }
 }
