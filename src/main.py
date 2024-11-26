@@ -4,7 +4,8 @@ import time
 import logging
 import argparse
 import signal
-from typing import NoReturn
+from types import TracebackType
+from typing import NoReturn, Type
 from backend.automation import Automation
 from backend.interval import Schedule
 from backend.multicast_srv import MulticastServer
@@ -201,5 +202,12 @@ def main() -> int:
     return ret
 
 
+def exception_hook(
+    _: Type[BaseException], __: BaseException, ___: TracebackType | None
+):
+    LOG.exception("Uncaught exception")
+
+
 if __name__ == "__main__":
+    sys.excepthook = exception_hook
     sys.exit(main())
