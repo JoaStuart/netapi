@@ -48,7 +48,7 @@ class OutputDevice(ABC):
 
 class DefaultOutput(OutputDevice):
     def api_resp(self) -> dict:
-        return {k: str(v) for k, v in self.data.items()}
+        return {k: v for k, v in self.data.items()}
 
 
 do: dict[str, Type[OutputDevice]] = {"default": DefaultOutput}
