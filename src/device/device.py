@@ -216,12 +216,6 @@ class Device:
                 f"The function provided could not be found: {".".join(fargs)}"
             )
 
-        if fargs[0] == "logout":
-            self.logout()
-            return WebResponse(
-                200, "LOGOUT", body=dumpb({"message": "Logout successful!"})
-            )
-
         resp = (
             WebClient(self._ip, DEV_PORT)
             .set_method(WebMethod.POST)

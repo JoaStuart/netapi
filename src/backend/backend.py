@@ -46,6 +46,7 @@ class BackendRequest(WebRequest):
         self.code: tuple[int, str] = (200, "OK")
 
         self.perms: PermissionLevel = DefaultPermissions()
+        self.dev: Device | None = None
 
     def REQUEST(self, pth: str, body: dict) -> WebResponse:
         """Method that gets executed upon a request
@@ -137,6 +138,7 @@ class BackendRequest(WebRequest):
             )
 
         self.perms = perms
+        self.device = device
 
     def _check_permissions(self, expected: int, fargs: list[str]) -> None:
         if self.perms.int_level() >= expected:
@@ -213,9 +215,10 @@ class BackendRequest(WebRequest):
 
         for name, fclass in BFUNC.items():
             if name.lower() == fargs[0].lower():
-                self._check_permissions(50, fargs)
+                api = fclass(self, fargs[1:], body)
+                self._check_permissions(api.permissions(50), fargs)
 
-                res = fclass(self, fargs[1:], body).api()
+                res = api.api()
 
                 if isinstance(self.response, dict):
                     if isinstance(res, dict):
@@ -240,9 +243,7 @@ class BackendRequest(WebRequest):
         """
 
         if device.has_local_fun(fargs[0]):
-            self._check_permissions(50, fargs)
-
-            resp = device.call_local_fun(fargs, body, self._recv_headers)
+            resp = device.call_local_fun(fargs, body, self._recv_headers, self.perms)
             self.code = (resp.code, resp.msg)
             self.headers |= resp.headers
             if isinstance(self.response, dict):
@@ -263,6 +264,12 @@ class BackendRequest(WebRequest):
 
         # Get the current device and permission level
         self._get_device()
+
+        # Try to log out
+        if self.dev != None and fargs[0] == "logout":
+            self.dev.logout()
+            del DEVICES[self._addr[0]]
+            raise FinishError(WebResponse(200, "LOGGED_OUT"))
 
         # Change output device
         if self._change_output_device(fargs):
