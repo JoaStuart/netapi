@@ -6,7 +6,6 @@ import os
 import re
 from typing import Any, cast
 
-from backend.backend import BFUNC
 from proj_types.event_type import EventType
 
 
@@ -146,6 +145,8 @@ class Event:
             fargs (list[str]): Arguments of the current command
             body (dict): Body for the current command
         """
+
+        from backend.backend import BFUNC
 
         for name, fclass in BFUNC.items():
             if name.lower() == fargs[0].lower():

@@ -31,24 +31,27 @@ class Automation:
                 data = rf.read()
             automation = Automation._load_by_str(data)
 
-            if automation is None:
-                LOG.warning("Could not load automation file %s", f)
+            if isinstance(automation, bool):
+                if not automation:
+                    LOG.warning("Could not load automation file %s", f)
                 return
 
             Schedule.add_schedule(automation.schedule)
 
     @staticmethod
-    def _load_by_str(data: str) -> "Automation | None":
+    def _load_by_str(data: str) -> "Automation | bool":
         try:
             jdata = json.loads(data)
             if jdata.get("@type") != "automation":
-                return
+                return False
 
             return Automation(jdata)
         except KeyError:
             pass
         except json.JSONDecodeError:
             pass
+
+        return True
 
     def __init__(self, data: dict[str, Any]) -> None:
         self._state: AutomationState = AutomationState.NORMAL

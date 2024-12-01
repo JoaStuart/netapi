@@ -46,7 +46,7 @@ def load_plugins(pldir: str, pl_type: list[Type]) -> dict[Type, dict[str, Type]]
                         if (
                             isinstance(attr, type)
                             and issubclass(attr, t)
-                            and attr is not pl_type
+                            and attr is not t
                         ):
                             pl[t] |= {attr_name: attr}
 
