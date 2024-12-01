@@ -47,6 +47,11 @@ class FrontendRequest(WebRequest):
         headers: dict[str, str] = {}
         code: tuple[int, str] = (200, "OK")
 
+        try:
+            perms: int = int(headers["Permissions"])
+        except Exception:
+            perms: int = 0
+
         for f in funcs:
             try:
                 fargs = f.split(".")
@@ -60,7 +65,19 @@ class FrontendRequest(WebRequest):
 
                 for name, fclass in FFUNCS.items():
                     if name.lower() == fargs[0].lower():
-                        res = fclass(self, fargs[1:], body).api()
+                        c = fclass(self, fargs[1:], body)
+                        if perms > c.permissions(50):
+                            return WebResponse(
+                                status_code=403,
+                                status_msg="NO_PERMS",
+                                body=dumpb(
+                                    {
+                                        "message": f"Not enough permissions to execute `{".".join(fargs)}`!"
+                                    }
+                                ),
+                            )
+
+                        res = c.api()
 
                         if type(response) == dict:
                             if type(res) == dict:

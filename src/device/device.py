@@ -1,4 +1,5 @@
 import base64
+from enum import Enum
 import gzip
 from io import BytesIO
 import json
@@ -32,6 +33,19 @@ DEV_PORT = 4001
 # Import PermissionLevel upon Type checking to avoid circular import
 if TYPE_CHECKING:
     from device.permissions import PermissionLevel
+
+
+class DeviceType(Enum):
+    NORMAL = "NORMAL"
+    MOBILE = "MOBILE"
+
+    @staticmethod
+    def can_do_request(tpe: "DeviceType") -> bool:
+        match tpe:
+            case DeviceType.NORMAL:
+                return True
+            case DeviceType.MOBILE:
+                return False
 
 
 class SubDevice:
@@ -86,6 +100,8 @@ class Device:
         self._subdevices: list[SubDevice] = []
         self._os: str = ""
         self._version: float = 0.0
+
+        self._type: DeviceType = DeviceType.NORMAL
 
         container[ip] = self
 
@@ -144,6 +160,7 @@ class Device:
 
         self._version = body.get("version", 0.0)
         self._os = body.get("os", "Unknown")
+        self._type = DeviceType(body.get("type", "NORMAL").upper())
 
         return WebResponse(
             200,
@@ -216,6 +233,9 @@ class Device:
                 f"The function provided could not be found: {".".join(fargs)}"
             )
 
+        if not DeviceType.can_do_request(self._type):
+            raise ValueError(f"Cannot send function to {self._type.value} device!")
+
         resp = (
             WebClient(self._ip, DEV_PORT)
             .set_method(WebMethod.POST)
@@ -235,6 +255,9 @@ class Device:
 
     def close(self) -> None:
         """Sends a close request to the frontend device"""
+
+        if not DeviceType.can_do_request(self._type):
+            return
 
         WebClient(self._ip, DEV_PORT).set_path("/close").set_secure(True).set_timeout(
             0.1
@@ -281,6 +304,7 @@ class FrontendDevice(CleanUp):
                     "subdevices": config.load_var("subdevices"),
                     "version": version,
                     "os": get_os_name(),
+                    "type": DeviceType.NORMAL.value,
                 }
             )
             .send()
