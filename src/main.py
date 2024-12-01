@@ -1,3 +1,4 @@
+import ctypes
 import os
 import sys
 import time
@@ -8,12 +9,13 @@ from types import TracebackType
 from typing import NoReturn, Type
 from backend.automation import Automation
 from backend.multicast_srv import MulticastServer
-from device.device import DEV_PORT
+from device.device import DEV_PORT, FrontendDevice
 from config import load_envvars
 from frontend.multicast_cli import MulticastClient
 from locations import VERSION
 import config
 import locations
+from proj_types.event_type import EventType
 from utils import CleanUp
 from webserver.webserver import WebServer
 
@@ -34,8 +36,34 @@ def handle_cleanup(*args, **kwargs) -> NoReturn:
     exit(0)
 
 
-for sig in [signal.SIGINT, signal.SIGTERM]:
-    signal.signal(sig, handle_cleanup)
+def windows_cleanup(event_type: int) -> bool:
+    if event_type == 6:  # CTRL_SHUTDOWN_EVENT
+        # Trigger shutdown event
+        try:
+            FrontendDevice("").dispatch_event(EventType.SHUTDOWN)
+        except Exception:
+            LOG.exception("Failed sending `SHUTDOWN` event!")
+
+    handle_cleanup()
+    return True
+
+
+def lin_cleanup() -> None:
+    for sig in [signal.SIGINT, signal.SIGTERM]:
+        signal.signal(sig, handle_cleanup)
+
+
+def win_cleanup() -> None:
+    kernel32 = ctypes.windll.kernel32  # type: ignore # Code only reachable on windows
+    kernel32.SetConsoleCtrlHandler(
+        ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)(windows_cleanup), True  # type: ignore
+    )
+
+
+if os.name == "nt":
+    win_cleanup()
+else:
+    lin_cleanup()
 
 
 def setup_logger(verbose: bool) -> None:
