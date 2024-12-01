@@ -1,4 +1,5 @@
 import abc
+import datetime
 import time
 from typing import Callable
 from threading import Thread
@@ -7,14 +8,14 @@ from proj_types.singleton import singleton
 
 
 @singleton
-class Schedulor:
+class Scheduler:
     SLEEP_TIME = 0.2
 
     def __init__(self) -> None:
         self._schedules: list["Executor"] = []
         self._last_tick = 0
 
-        Thread(target=Schedulor._tick_all, name="Intervalometer", daemon=True).start()
+        Thread(target=Scheduler._tick_all, name="Intervalometer", daemon=True).start()
 
     def add_schedule(self, executor: "Executor") -> None:
         self._schedules.append(executor)
@@ -30,7 +31,7 @@ class Schedulor:
             for s in self._schedules:
                 s.tick(t, dt)
 
-            time.sleep(Schedulor.SLEEP_TIME)
+            time.sleep(Scheduler.SLEEP_TIME)
 
 
 class Executor(abc.ABC):
@@ -41,10 +42,10 @@ class Executor(abc.ABC):
         self.register()
 
     def register(self) -> None:
-        Schedulor().add_schedule(self)
+        Scheduler().add_schedule(self)
 
     def unregister(self) -> None:
-        Schedulor().remove_schedule(self)
+        Scheduler().remove_schedule(self)
 
     def trigger(self) -> None:
         self._on_trigger()
@@ -94,3 +95,28 @@ class UnixExecutor(Executor):
         if current_time >= self._exec_time:
             self.trigger()
             self.unregister()
+
+
+class DailyExecutor(Executor):
+    EXECUTE_AT = datetime.time(2, 0)  # 02:00:00
+
+    def __init__(self, on_trigger: Callable[[], None]) -> None:
+        super().__init__(on_trigger)
+
+        self._exec_time = self._seconds_until()
+
+    def _seconds_until(self) -> float:
+        now = datetime.datetime.now()
+        today_target = datetime.datetime.combine(now.date(), DailyExecutor.EXECUTE_AT)
+
+        if now > today_target:
+            today_target += datetime.timedelta(days=1)
+
+        return int((today_target - now).total_seconds())
+
+    def tick(self, current_time: float, passed_time: float) -> None:
+        self._exec_time -= passed_time
+
+        if self._exec_time <= 0:
+            self.trigger()
+            self._exec_time = self._seconds_until()

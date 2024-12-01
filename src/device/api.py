@@ -2,7 +2,13 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Type
 
-from backend.interval import Executor
+from backend.interval import (
+    DailyExecutor,
+    DeferredExecutor,
+    Executor,
+    TimedExecutor,
+    UnixExecutor,
+)
 from device.pluginloader import load_plugins
 from locations import PL_BFUNC
 from webserver.webrequest import WebRequest
@@ -39,6 +45,13 @@ def load_dir(dir: str) -> dict[str, Type[APIFunct]]:
     tasks = pl[Executor]
     for name, task in tasks.items():
         LOG.debug("Registering task %s", name)
-        task()
+
+        if (
+            task != TimedExecutor
+            and task != DeferredExecutor
+            and task != UnixExecutor
+            and task != DailyExecutor
+        ):
+            task()
 
     return pl[APIFunct]

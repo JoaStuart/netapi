@@ -136,20 +136,7 @@ class Event:
 
             # Execute the
             fargs = path.strip("/").split(".")
-            self._execute_backend(fargs, req.get("body", {}))
 
-    def _execute_backend(self, fargs: list[str], body: dict) -> None:
-        """Execute a backend function without needing a WebRequest
+            from backend.backend import BackendRequest
 
-        Args:
-            fargs (list[str]): Arguments of the current command
-            body (dict): Body for the current command
-        """
-
-        from backend.backend import BFUNC
-
-        for name, fclass in BFUNC.items():
-            if name.lower() == fargs[0].lower():
-                fclass(None, fargs[1:], body).api()
-
-                return
+            BackendRequest.execute_backend(fargs, req.get("body", {}))

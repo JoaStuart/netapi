@@ -295,3 +295,21 @@ class BackendRequest(WebRequest):
                 body=dumpb({"message": f"API function `{".".join(fargs)}` not found!"}),
             )
         )
+
+    @staticmethod
+    def execute_backend(fargs: list[str], body: dict) -> None:
+        """Execute a backend function without needing a WebRequest
+
+        Args:
+            fargs (list[str]): Arguments of the current command
+            body (dict): Body for the current command
+        """
+
+        for name, fclass in BFUNC.items():
+            if name.lower() == fargs[0].lower():
+                fclass(None, fargs[1:], body).api()
+
+                LOG.info("Executed backend /%s", ".".join(fargs))
+                return
+
+        LOG.warning("Could not find BFunc for `%s`!" ".".join(fargs))

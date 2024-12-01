@@ -4,8 +4,8 @@ import logging
 import os
 from typing import Any
 
-from backend.backend import BFUNC
-from backend.interval import Schedulor, TimedExecutor
+from backend.backend import BFUNC, BackendRequest
+from backend.interval import Scheduler, TimedExecutor
 from backend.output import OUTPUTS
 from backend.sensor import SENSORS
 import locations
@@ -32,7 +32,7 @@ class Automation:
             automation = Automation._load_by_str(data)
 
             if isinstance(automation, bool):
-                if not automation:
+                if automation:
                     LOG.warning("Could not load automation file %s", f)
                 return
 
@@ -126,23 +126,7 @@ class Automation:
                     body[k] = self._inject_vars(v)
 
             for p in path:
-                self._execute_backend(p.split("."), body)
-
-    def _execute_backend(self, fargs: list[str], body: dict) -> None:
-        """Execute a backend function without needing a WebRequest
-
-        Args:
-            fargs (list[str]): Arguments of the current command
-            body (dict): Body for the current command
-        """
-
-        for name, fclass in BFUNC.items():
-            if name.lower() == fargs[0].lower():
-                fclass(None, fargs[1:], body).api()
-
-                return
-
-        LOG.warning("[%s] Could not find BFunc for `%s`!", self._title, ".".join(fargs))
+                BackendRequest.execute_backend(p.split("."), body)
 
     def _query_sensor(self, fargs: list[str], body: dict) -> dict[str, Any]:
         """Query a sensor without needing a WebRequest

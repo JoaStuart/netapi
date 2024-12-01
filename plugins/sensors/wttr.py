@@ -1,11 +1,17 @@
+import logging
 import os
 import cv2
 import numpy as np
 import requests
+from backend.event import Event
+from backend.interval import DailyExecutor, UnixExecutor
 from backend.output import OutputDevice
 from backend.sensor import Sensor
 import locations
+from proj_types.event_type import EventType
 import utils
+
+LOG = logging.getLogger()
 
 
 class Wttr(Sensor):
@@ -32,6 +38,7 @@ class Wttr(Sensor):
             ("current", ",".join(cur_params)),
             ("timeformat", "unixtime"),
             ("timezone", "Europe%2FBerlin"),
+            ("forecast_days", "1"),
         ]
 
         url = "https://api.open-meteo.com/v1/forecast?"
@@ -114,3 +121,25 @@ class Wttr(Sensor):
             return None
 
         return str(self.data)
+
+
+class SundownMaker(DailyExecutor):
+    def __init__(self) -> None:
+        super().__init__(self.on_trigger)
+
+    def on_trigger(self) -> None:
+        wttr = Wttr()
+        wttr.poll()
+        if wttr.data is None:
+            return
+
+        try:
+            sunset = wttr.data["daily"]["sunset"][0]
+        except KeyError:
+            LOG.exception("Could not retrieve todays sunset")
+            return
+
+        UnixExecutor(sunset, self.on_sunset)
+
+    def on_sunset(self) -> None:
+        Event.trigger_all(EventType.SUNSET)
