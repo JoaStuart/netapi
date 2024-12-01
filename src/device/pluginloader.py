@@ -8,18 +8,18 @@ from typing import Type
 LOG = logging.getLogger()
 
 
-def load_plugins(pldir: str, pl_type: Type) -> dict[str, Type]:
+def load_plugins(pldir: str, pl_type: list[Type]) -> dict[Type, dict[str, Type]]:
     """Loads all plugins located inside the provided directory
 
     Args:
         pldir (str): Parent directory of the plugins
-        pl_type (Type): The type the plugins should have
+        pl_type (list[Type]): The type the plugins should have
 
     Returns:
-        dict[str, Type]: All loaded plugins
+        dict[Type, dict[str, Type]]: All loaded plugins
     """
 
-    pl = {}
+    pl = {t: {} for t in pl_type}
 
     for f in os.listdir(pldir):
         if f.endswith(".py") and not f.startswith("_"):
@@ -30,27 +30,27 @@ def load_plugins(pldir: str, pl_type: Type) -> dict[str, Type]:
                 spec = importlib.util.spec_from_file_location(module_name, plugin_path)
                 if spec == None:
                     LOG.warning("PluginLoader Spec returned None")
-                    return {}
+                    return pl
 
                 module = importlib.util.module_from_spec(spec)
                 loader = spec.loader
                 if loader == None:
                     LOG.warning("PluginLoader SpecLoader returned None")
-                    return {}
+                    return pl
 
                 loader.exec_module(module)
 
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
-                    if (
-                        isinstance(attr, type)
-                        and issubclass(attr, pl_type)
-                        and attr is not pl_type
-                    ):
-                        pl[attr_name] = attr
+                    for t in pl_type:
+                        if (
+                            isinstance(attr, type)
+                            and issubclass(attr, t)
+                            and attr is not pl_type
+                        ):
+                            pl[t] |= {attr_name: attr}
 
             except Exception:
                 LOG.exception("Plugin %s did not load successfully:", f)
-                traceback.print_exc()
 
     return pl
