@@ -1,13 +1,16 @@
 import logging
 import os
 from threading import Thread
+import tkinter as tk
+from tkinter import simpledialog
 from typing import NoReturn, Callable
 import pystray
 from PIL import Image
 
+from device.device import FrontendDevice
 import locations
 from proj_types.singleton import singleton
-from utils import CleanUp
+from proj_types.cleanup import CleanUp
 
 LOG = logging.getLogger()
 
@@ -25,6 +28,7 @@ class SysTray(CleanUp):
         self._icon = None
         self.handle_cleanup: Callable[..., NoReturn] | None = None
         self._entries: list[pystray.MenuItem] = [
+            pystray.MenuItem("APIRequest", self._create_request),
             pystray.MenuItem("Exit", self.cleanup),
         ]
 
@@ -34,6 +38,15 @@ class SysTray(CleanUp):
             NAME,
             self._entries,
         )
+
+    def _create_request(self) -> None:
+        root = tk.Tk()
+        root.withdraw()
+        path = simpledialog.askstring("API Request", "Request path:")
+        if path is None:
+            return
+
+        FrontendDevice("")._action_client(path).send()
 
     def start(self) -> None:
         Thread(target=self._tray.run, daemon=True).start()

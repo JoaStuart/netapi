@@ -28,7 +28,7 @@ class WebResponse(ABC):
         keep_alive: bool = False,
     ) -> None:
         self._code = status_code
-        self._msg = status_msg
+        self._msg = status_msg.strip()
         self._headers = headers
         self._body = body
         self._keep_alive = keep_alive
@@ -106,6 +106,8 @@ class WebRequest:
         self.method = status.pop(0)
         gargs = status.pop(0).split("?", 1)
         self.version = " ".join(status).strip()
+        if self.version.lower() != "http/1.1":
+            raise ValueError("Invalid version for request")
 
         self.path = gargs[0]
 

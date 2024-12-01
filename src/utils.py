@@ -212,9 +212,3 @@ def load_dict_var(dct: dict, path: str) -> Any:
         dct = dct[p]
 
     return dct
-
-
-class CleanUp(ABC):
-    @abstractmethod
-    def cleanup(self) -> None:
-        pass

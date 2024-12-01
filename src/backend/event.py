@@ -6,6 +6,7 @@ import os
 import re
 from typing import Any, cast
 
+import locations
 from proj_types.event_type import EventType
 
 
@@ -16,12 +17,13 @@ class Event:
     _events: list["Event"] = []
 
     @staticmethod
-    def load_files(dir: str) -> None:
+    def load_all() -> None:
         """Loads all event triggers inside the directory
 
         Args:
             dir (str): Directory path
         """
+        dir = locations.AUTOMATION
 
         for k in os.listdir(dir):
             if k.startswith("_"):

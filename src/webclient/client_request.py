@@ -46,7 +46,7 @@ class WebClient:
         if "/" in url:
             url, path = url.split("/", 1)
         else:
-            path = ""
+            path = "/"
 
         if ":" in url:
             url, port = url.split(":", 1)

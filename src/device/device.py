@@ -19,7 +19,8 @@ from locations import VERSION
 import locations
 from proj_types.event_type import EventType
 from proj_types.singleton import singleton
-from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
+from proj_types.cleanup import CleanUp
+from utils import CaseInsensitiveDict, dumpb, get_os_name
 from webclient.client_request import WebClient, WebMethod
 from webserver.webrequest import WebResponse
 

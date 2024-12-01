@@ -1,69 +1,27 @@
-import ctypes
 import os
 import sys
 import time
 import logging
 import argparse
-import signal
 from types import TracebackType
 from typing import NoReturn, Type
 from backend.automation import Automation
+from backend.event import Event
 from backend.multicast_srv import MulticastServer
-from device.device import DEV_PORT, FrontendDevice
+from device.device import DEV_PORT
 from config import load_envvars
 from frontend.multicast_cli import MulticastClient
 from locations import VERSION
 import config
 import locations
-from proj_types.event_type import EventType
-from utils import CleanUp
+from proj_types.cleanup import CleanUp, CleanupHandler
 from webserver.webserver import WebServer
 
 
 LOG = logging.getLogger()
 
-CLEANUP_STACK: list[CleanUp] = []
 
-
-def handle_cleanup(*args, **kwargs) -> NoReturn:
-    """Handle the cleanup upon any revieced signal"""
-
-    LOG.info("Starting cleanup")
-
-    for c in CLEANUP_STACK:
-        c.cleanup()
-    CLEANUP_STACK.clear()
-    exit(0)
-
-
-def windows_cleanup(event_type: int) -> bool:
-    if event_type == 6:  # CTRL_SHUTDOWN_EVENT
-        # Trigger shutdown event
-        try:
-            FrontendDevice("").dispatch_event(EventType.SHUTDOWN)
-        except Exception:
-            LOG.exception("Failed sending `SHUTDOWN` event!")
-
-    handle_cleanup()
-    return True
-
-
-def lin_cleanup() -> None:
-    for sig in [signal.SIGINT, signal.SIGTERM]:
-        signal.signal(sig, handle_cleanup)
-
-
-def win_cleanup() -> None:
-    kernel32 = ctypes.windll.kernel32  # type: ignore # Code only reachable on windows
-    kernel32.SetConsoleCtrlHandler(
-        ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)(windows_cleanup), True  # type: ignore
-    )
-
-
-if os.name == "nt":
-    win_cleanup()
-else:
-    lin_cleanup()
+CleanupHandler().register()
 
 
 def setup_logger(verbose: bool) -> None:
@@ -148,7 +106,7 @@ def frontend() -> None | int:
 
     # Start systray
     tray = SysTray()
-    CLEANUP_STACK.append(tray)
+    CleanupHandler().CLEANUP_STACK.append(tray)
     tray.start()
 
     # Get backend IP by Multicast
@@ -161,21 +119,21 @@ def frontend() -> None | int:
     # Log in and start frontend
     try:
         fdev = FrontendDevice(ip)
-        CLEANUP_STACK.append(fdev)
+        CleanupHandler().CLEANUP_STACK.append(fdev)
         fdev.login(VERSION)
     except Exception:
         tray.update_icon(TrayState.FAILED)
         LOG.exception(f"Login failed at {ip}. Exiting...")
         time.sleep(2)
-        CLEANUP_STACK.remove(fdev)
+        CleanupHandler().CLEANUP_STACK.remove(fdev)
         return 1
 
     tray.update_icon(TrayState.CONNECTED)
-    tray.handle_cleanup = handle_cleanup
+    tray.handle_cleanup = CleanupHandler().handle_cleanup
 
     LOG.info("Connected to backend")
     srv = WebServer(DEV_PORT, FrontendRequest, {"ip": ip})
-    CLEANUP_STACK.append(srv)
+    CleanupHandler().CLEANUP_STACK.append(srv)
     srv.start_blocking()
 
 
@@ -189,22 +147,24 @@ def backend() -> None | int:
 
     # start backend
     srv = WebServer(DEV_PORT, BackendRequest)
-    CLEANUP_STACK.append(srv)
+    CleanupHandler().CLEANUP_STACK.append(srv)
 
     class BC(CleanUp):
         def cleanup(self) -> None:
             for _, d in DEVICES.items():
                 d.close()
 
-    CLEANUP_STACK.append(BC())
+    CleanupHandler().CLEANUP_STACK.append(BC())
 
     LOG.info("Started scheduler")
 
     Automation.load_all()
     LOG.info("Loaded automations")
 
+    Event.load_all()
+
     srv.start_blocking()
-    handle_cleanup()
+    CleanupHandler().handle_cleanup()
 
 
 def main() -> int:
