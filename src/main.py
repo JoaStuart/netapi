@@ -113,7 +113,7 @@ def update() -> None:
 
 
 def frontend() -> None | int:
-    from frontend.systray import SysTray
+    from frontend.systray import SysTray, TrayState
     from device.device import FrontendDevice
     from frontend.frontend import FrontendRequest
 
@@ -137,13 +137,13 @@ def frontend() -> None | int:
         CLEANUP_STACK.append(fdev)
         fdev.login(VERSION)
     except Exception:
-        tray.update_icon(SysTray.FAILED)
+        tray.update_icon(TrayState.FAILED)
         LOG.exception(f"Login failed at {ip}. Exiting...")
         time.sleep(2)
         CLEANUP_STACK.remove(fdev)
         return 1
 
-    tray.update_icon(SysTray.CONNECTED)
+    tray.update_icon(TrayState.CONNECTED)
     tray.handle_cleanup = handle_cleanup
 
     LOG.info("Connected to backend")

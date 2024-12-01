@@ -1,3 +1,4 @@
+import logging
 import os
 from threading import Thread
 from typing import NoReturn, Callable
@@ -5,24 +6,33 @@ import pystray
 from PIL import Image
 
 import locations
+from proj_types.singleton import singleton
 from utils import CleanUp
 
+LOG = logging.getLogger()
 
-class SysTray(CleanUp):
+
+class TrayState:
     CONNECTING = 0
     CONNECTED = 1
     FAILED = 2
 
+
+@singleton
+class SysTray(CleanUp):
+
     def __init__(self) -> None:
         self._icon = None
         self.handle_cleanup: Callable[..., NoReturn] | None = None
-
-        menu = pystray.Menu(
+        self._entries: list[pystray.MenuItem] = [
             pystray.MenuItem("Exit", self.cleanup),
-        )
+        ]
 
         self._tray = pystray.Icon(
-            NAME := "NetAPI", self._icon_by_state(SysTray.CONNECTING), NAME, menu
+            NAME := "NetAPI",
+            self._icon_by_state(TrayState.CONNECTING),
+            NAME,
+            self._entries,
         )
 
     def start(self) -> None:
@@ -36,11 +46,11 @@ class SysTray(CleanUp):
             self._load_icon()
 
         match state:
-            case SysTray.CONNECTING:
+            case TrayState.CONNECTING:
                 return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0xFF, 0xFF, 0x00))  # type: ignore
-            case SysTray.CONNECTED:
+            case TrayState.CONNECTED:
                 return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0x00, 0xFF, 0x00))  # type: ignore
-            case SysTray.FAILED:
+            case TrayState.FAILED:
                 return replace_color(self._icon, (0xE8, 0xEA, 0xED), (0xFF, 0x00, 0x00))  # type: ignore
 
         return self._icon
@@ -49,10 +59,15 @@ class SysTray(CleanUp):
         self._tray.icon = self._icon_by_state(state)
         self._tray._update_icon()
 
+    def _update_menu(self) -> None:
+        self._tray.menu = self._entries
+        self._tray.update_menu()
+
     def cleanup(self) -> None:
         if not self._tray._running:
             return
 
+        self._tray.visible = False
         self._tray.stop()
 
         if self._icon != None:
@@ -60,6 +75,11 @@ class SysTray(CleanUp):
 
         if self.handle_cleanup != None:
             self.handle_cleanup()
+
+    def add_entry(self, entry: pystray.MenuItem) -> None:
+        LOG.info(f"Added {entry.text}")
+        self._entries.append(entry)
+        self._update_menu()
 
 
 def replace_color(
