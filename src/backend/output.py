@@ -52,4 +52,6 @@ class DefaultOutput(OutputDevice):
 
 
 do: dict[str, Type[OutputDevice]] = {"default": DefaultOutput}
-OUTPUTS: dict[str, Type[OutputDevice]] = do | load_plugins(PL_OUTPUT, OutputDevice)
+OUTPUTS: dict[str, Type[OutputDevice]] = (
+    do | load_plugins(PL_OUTPUT, [OutputDevice])[OutputDevice]
+)

@@ -63,5 +63,5 @@ class Sensor(ABC):
 
 
 SENSORS: dict[str, Sensor] = {
-    k: v() for k, v in load_plugins(PL_SENSOR, Sensor).items()
+    k: v() for k, v in load_plugins(PL_SENSOR, [Sensor])[Sensor].items()
 }
