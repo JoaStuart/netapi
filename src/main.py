@@ -7,7 +7,6 @@ import signal
 from types import TracebackType
 from typing import NoReturn, Type
 from backend.automation import Automation
-from backend.interval import Schedule
 from backend.multicast_srv import MulticastServer
 from device.device import DEV_PORT
 from config import load_envvars
@@ -171,7 +170,6 @@ def backend() -> None | int:
 
     CLEANUP_STACK.append(BC())
 
-    Schedule.start_scheduler()
     LOG.info("Started scheduler")
 
     Automation.load_all()

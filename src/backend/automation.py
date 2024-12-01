@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from backend.backend import BFUNC
-from backend.interval import Schedule
+from backend.interval import Schedulor, TimedExecutor
 from backend.output import OUTPUTS
 from backend.sensor import SENSORS
 import locations
@@ -36,8 +36,6 @@ class Automation:
                     LOG.warning("Could not load automation file %s", f)
                 return
 
-            Schedule.add_schedule(automation.schedule)
-
     @staticmethod
     def _load_by_str(data: str) -> "Automation | bool":
         try:
@@ -64,7 +62,7 @@ class Automation:
 
         self._vars: dict[str, Any] = {}
 
-        self.schedule = Schedule(self._frequency, self.tick)
+        TimedExecutor(self._frequency, self.tick)
 
     def _inject_vars(self, varstr: str) -> str:
         """Replaces all variables in the given string with their declared values

@@ -7,7 +7,7 @@ from threading import Thread
 
 import requests
 
-from backend.interval import Schedule
+from backend.interval import TimedExecutor
 import config
 from device.api import APIFunct
 import locations
@@ -24,7 +24,7 @@ class Sky(APIFunct):
     SAVE_FOLDER = os.path.join(locations.ROOT, config.load_var("sky.save_folder"))  # type: ignore
 
     FULL = False
-    SCHEDULE: Schedule | None = None
+    EXECUTOR: TimedExecutor | None = None
 
     def api(self) -> dict | tuple[bytes, str]:
         if len(self.args) > 0:
@@ -41,17 +41,16 @@ class Sky(APIFunct):
         return {"sky": {"files": len(self._images())}}
 
     def stop(self) -> dict | tuple[bytes, str]:
-        if Sky.SCHEDULE is not None:
-            Schedule.remove_schedule(Sky.SCHEDULE)
-            Sky.SCHEDULE = None
+        if Sky.EXECUTOR is not None:
+            Sky.EXECUTOR.unregister()
+            Sky.EXECUTOR = None
 
             return {"sky": "Stopped"}
         return {"sky": "No instance running"}
 
     def start(self) -> dict | tuple[bytes, str]:
-        if Sky.SCHEDULE is None:
-            Sky.SCHEDULE = Schedule(self.INTERVAL, self.take_picture)
-            Schedule.add_schedule(Sky.SCHEDULE)
+        if Sky.EXECUTOR is None:
+            Sky.EXECUTOR = TimedExecutor(self.INTERVAL, self.take_picture)
 
             for f in self._images():
                 os.remove(os.path.join(self.SAVE_FOLDER, f))

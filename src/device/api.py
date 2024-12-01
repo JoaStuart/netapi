@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Type
 
-from backend.interval import Schedule
+from backend.interval import Executor
 from device.pluginloader import load_plugins
 from locations import PL_BFUNC
 from webserver.webrequest import WebRequest
@@ -33,31 +33,12 @@ class APIFunct(ABC):
         pass
 
 
-class Task(ABC, Schedule):
-    def __init__(self, frequency: float) -> None:
-        super().__init__(frequency, self.on_tick)
-
-        Schedule.add_schedule(self)
-
-    def register(self) -> None:
-        Schedule.add_schedule(self)
-
-    def unregister(self) -> None:
-        Schedule.remove_schedule(self)
-
-    @abstractmethod
-    def on_tick(self) -> None:
-        """Executor for ticking"""
-
-        pass
-
-
 def load_dir(dir: str) -> dict[str, Type[APIFunct]]:
-    pl = load_plugins(dir, [APIFunct, Task])
+    pl = load_plugins(dir, [APIFunct, Executor])
 
-    tasks = pl[Task]
+    tasks = pl[Executor]
     for name, task in tasks.items():
         LOG.debug("Registering task %s", name)
-        Schedule.add_schedule(task())
+        task()
 
     return pl[APIFunct]
