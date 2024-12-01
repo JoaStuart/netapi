@@ -17,6 +17,7 @@ import requests
 import config
 from locations import VERSION
 import locations
+from proj_types.event_type import EventType
 from proj_types.singleton import singleton
 from utils import CaseInsensitiveDict, CleanUp, dumpb, get_os_name
 from webclient.client_request import WebClient, WebMethod
@@ -353,6 +354,9 @@ class FrontendDevice(CleanUp):
             .set_secure(True)
             .authorize(self._token)
         )
+
+    def dispatch_event(self, event: EventType) -> None:
+        self._action_client(f"/evt.{event.name}").send()
 
     def cleanup(self) -> None:
         resp = self._action_client("/logout").send()

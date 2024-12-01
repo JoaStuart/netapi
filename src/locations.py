@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 import os
 from typing import IO
@@ -5,7 +6,7 @@ import zipfile
 
 LOG = logging.getLogger()
 
-VERSION = 0.56
+VERSION = 0.57
 
 SRC = os.path.dirname(__file__)
 ROOT = os.path.join(SRC, "..")
