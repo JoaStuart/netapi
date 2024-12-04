@@ -15,7 +15,7 @@ class Scheduler:
         self._schedules: list["Executor"] = []
         self._last_tick = 0
 
-        Thread(target=Scheduler._tick_all, name="Intervalometer", daemon=True).start()
+        Thread(target=self._tick_all, name="Intervalometer", daemon=True).start()
 
     def add_schedule(self, executor: "Executor") -> None:
         self._schedules.append(executor)
@@ -31,7 +31,7 @@ class Scheduler:
             for s in self._schedules:
                 s.tick(t, dt)
 
-            time.sleep(Scheduler.SLEEP_TIME)
+            time.sleep(self.SLEEP_TIME)
 
 
 class Executor(abc.ABC):

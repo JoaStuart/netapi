@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Any
 from locations import ROOT
+import locations
 
 
 LOG = logging.getLogger()
@@ -17,6 +18,12 @@ def load_envvars() -> None:
     """Loads all specified EnvVars from the config file"""
 
     vs = load_var("environ")
+
+    # Load from secrets file
+    if isinstance(vs, str):
+        with open(os.path.join(locations.ROOT, vs), "r") as rf:
+            vs = json.loads(rf.read())
+
     if not isinstance(vs, dict):
         return
 

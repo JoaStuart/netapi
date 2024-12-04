@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import threading
 from typing import Any, cast
 
 import locations
@@ -15,14 +16,13 @@ LOG = logging.getLogger()
 
 class Event:
     _events: list["Event"] = []
+    _trigger: threading.Event = threading.Event()
+    _queue: list[EventType] = []
 
     @staticmethod
     def load_all() -> None:
-        """Loads all event triggers inside the directory
+        """Loads all event triggers inside the directory"""
 
-        Args:
-            dir (str): Directory path
-        """
         dir = locations.AUTOMATION
 
         for k in os.listdir(dir):
@@ -35,7 +35,26 @@ class Event:
             if data.get("@type", None) != "event":
                 continue
 
+            LOG.debug("Loading event %s", data.get("title", ""))
+
             Event.add_event(data)
+
+        threading.Thread(
+            target=Event._event_thread, daemon=True, name="EventThread"
+        ).start()
+
+    @staticmethod
+    def _event_thread() -> None:
+        while True:
+            Event._trigger.wait()
+
+            for et in Event._queue:
+                for evt in Event._events:
+                    if evt.event == et and evt.check_time():
+                        evt.trigger()
+
+            Event._queue.clear()
+            Event._trigger.clear()
 
     @staticmethod
     def add_event(data: dict[str, Any]) -> None:
@@ -55,9 +74,8 @@ class Event:
 
     @staticmethod
     def trigger_all(tpe: EventType) -> None:
-        for evt in Event._events:
-            if evt.event == tpe and evt.check_time():
-                evt.trigger()
+        Event._queue.append(tpe)
+        Event._trigger.set()
 
     def __init__(
         self, event: EventType, title: str, then: list[dict[str, Any]]

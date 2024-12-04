@@ -28,5 +28,5 @@
     "joalaptop": "38:fc:98:c9:66:df"
   },
   "subdevices": [],
-  "environ": {}
+  "environ": ".secrets.json"
 }

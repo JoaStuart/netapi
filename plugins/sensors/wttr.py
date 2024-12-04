@@ -1,10 +1,11 @@
 import logging
 import os
+import time
 import cv2
 import numpy as np
 import requests
 from backend.event import Event
-from backend.interval import DailyExecutor, UnixExecutor
+from backend.interval import DailyExecutor, DeferredExecutor, UnixExecutor
 from backend.output import OutputDevice
 from backend.sensor import Sensor
 import locations
@@ -32,10 +33,15 @@ class Wttr(Sensor):
             "cloud_cover",
         ]
 
+        day_params = [
+            "sunset",
+        ]
+
         req_params = [
             ("latitude", self.lat),
             ("longitude", self.long),
             ("current", ",".join(cur_params)),
+            ("daily", ",".join(day_params)),
             ("timeformat", "unixtime"),
             ("timezone", "Europe%2FBerlin"),
             ("forecast_days", "1"),
@@ -46,7 +52,7 @@ class Wttr(Sensor):
 
         resp = requests.get(url + qry).json()
 
-        self.data = resp["current"]
+        self.data = resp
 
     def to(self, device: OutputDevice, args: list[str]) -> None:
         if self.data == None:
@@ -55,7 +61,7 @@ class Wttr(Sensor):
         match type(device).__name__:
             case "StreamDeck":
                 device.data = {
-                    "title": f"{int(self.data["temperature_2m"])}°C",
+                    "title": f"{int(self.data["current"]["temperature_2m"])}°C",
                     "image": utils.img_b64(self._sd_ico()),
                     "alert": "ok",
                 }
@@ -66,8 +72,8 @@ class Wttr(Sensor):
         if self.data == None:
             return ""
 
-        ww = self.data["weather_code"]
-        day = self.data["is_day"]
+        ww = self.data["current"]["weather_code"]
+        day = self.data["current"]["is_day"]
 
         if ww <= 0:
             return f"0{"d" if day else "n"}.png"
@@ -139,7 +145,12 @@ class SundownMaker(DailyExecutor):
             LOG.exception("Could not retrieve todays sunset")
             return
 
-        UnixExecutor(sunset, self.on_sunset)
+        LOG.info("Got sunset time %d", sunset)
+        if time.time() >= sunset:
+            UnixExecutor(sunset, self.on_sunset)
 
     def on_sunset(self) -> None:
         Event.trigger_all(EventType.SUNSET)
+
+
+DeferredExecutor(1, lambda: SundownMaker().on_trigger())

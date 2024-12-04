@@ -36,6 +36,8 @@ def setup_logger(verbose: bool) -> None:
         "%Y-%m-%d %H:%M:%S",
     )
     LOG.setLevel(logging.DEBUG)
+    for h in LOG.handlers:
+        LOG.removeHandler(h)
 
     logPath = os.path.join(locations.ROOT, "logs")
     logName = time.strftime("%Y-%m-%d %H-%M", time.localtime())
@@ -162,6 +164,7 @@ def backend() -> None | int:
     LOG.info("Loaded automations")
 
     Event.load_all()
+    LOG.info("Loaded events")
 
     srv.start_blocking()
     CleanupHandler().handle_cleanup()

@@ -5,7 +5,7 @@
   "time": "$now > $19:00 or $now < $5:00",
   "then": [
     {
-      "path": "/govee.off",
+      "path": "/meross.on.1",
       "body": {}
     }
   ]
