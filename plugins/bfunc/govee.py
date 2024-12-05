@@ -3,7 +3,7 @@ import json
 import socket
 from typing import Any
 import config
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 from webserver.webrequest import WebRequest
 
 
@@ -81,9 +81,9 @@ class Govee(APIFunct):
         super().__init__(request, args, body)
         self._govee = GoveeLight(str(config.load_var("govee.ip")))
 
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         if len(self.args) == 0:
-            return {}
+            return APIResult.by_success(False)
 
         match self.args[0]:
             case "on":
@@ -95,7 +95,9 @@ class Govee(APIFunct):
                     try:
                         self._govee.brightness(int(self.args[1]))
                     except ValueError:
-                        return {"govee": "Brightness value must be an int"}
+                        return APIResult.by_msg(
+                            "Brightness value must be an int", success=False
+                        )
             case _:
-                return {"govee": "SubFunction not found!"}
-        return {}
+                return APIResult.by_msg("SubFunction not found!", success=False)
+        return APIResult.by_success(True)

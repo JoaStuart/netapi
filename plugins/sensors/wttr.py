@@ -146,7 +146,7 @@ class SundownMaker(DailyExecutor):
             return
 
         LOG.info("Got sunset time %d", sunset)
-        if time.time() >= sunset:
+        if time.time() <= sunset:
             UnixExecutor(sunset, self.on_sunset)
 
     def on_sunset(self) -> None:

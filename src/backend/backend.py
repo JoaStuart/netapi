@@ -8,7 +8,7 @@ from typing import Any, Type
 from device import api
 from device.permissions import DefaultPermissions, PermissionLevel
 from utils import dumpb
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 from device.device import Device
 from backend.sensor import SENSORS
 from locations import PL_BFUNC
@@ -41,9 +41,8 @@ class BackendRequest(WebRequest):
         super().__init__(parent, conn, addr, args)
 
         self.outputtype: Type[OutputDevice] = OUTPUTS["default"]
-        self.response: dict[str, str] | tuple[bytes, str] = {}
+        self.response: APIResult = APIResult.empty()
         self.headers: dict[str, str] = {}
-        self.code: tuple[int, str] = (200, "OK")
 
         self.perms: PermissionLevel = DefaultPermissions()
         self.dev: Device | None = None
@@ -89,15 +88,7 @@ class BackendRequest(WebRequest):
                     ),
                 )
 
-        return WebResponse(
-            *self.code,
-            headers=self.headers,
-            body=(
-                dumpb(self.response)
-                if isinstance(self.response, dict)
-                else self.response
-            ),
-        )
+        return self.response.webresponse()
 
     def _login(self, body: dict):
         """Performs a login using the arguments given in the body
@@ -193,10 +184,10 @@ class BackendRequest(WebRequest):
 
                 out = self.outputtype(body)
                 inst.to(out, fargs[1:])
-                if type(self.response) == dict:
-                    self.response |= out.api_resp()
-                    self.headers |= out.api_headers()
-                    self.code = out.api_response(self.code)
+
+                if isinstance(self.response.json, dict):
+                    self.response.set_json = self.response.json or out.api_resp()
+                self.headers |= out.api_headers()
 
                 return True
 
@@ -218,13 +209,7 @@ class BackendRequest(WebRequest):
                 api = fclass(self, fargs[1:], body)
                 self._check_permissions(api.permissions(50), fargs)
 
-                res = api.api()
-
-                if isinstance(self.response, dict):
-                    if isinstance(res, dict):
-                        self.response |= res
-                    else:
-                        self.response = res
+                self.response.combine(fargs[0], api.api())
 
                 return True
 
@@ -244,15 +229,18 @@ class BackendRequest(WebRequest):
 
         if device.has_local_fun(fargs[0]):
             resp = device.call_local_fun(fargs, body, self._recv_headers, self.perms)
-            self.code = (resp.code, resp.msg)
             self.headers |= resp.headers
             if isinstance(self.response, dict):
                 data, tpe = resp.body
                 if tpe.lower() == "application/json":
                     jdta = json.loads(data)
-                    self.response |= jdta
+                    self.response.combine(
+                        fargs[0], APIResult.by_json(jdta, success=resp.code == 200)
+                    )
                 else:
-                    self.response = (data, tpe)
+                    self.response.combine(
+                        fargs[0], APIResult.by_data(data, tpe, success=resp.code == 200)
+                    )
             return True
 
         return False

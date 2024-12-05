@@ -1,8 +1,8 @@
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 
 
 class TemplateFunc(APIFunct):
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         # Do stuff
 
-        return {"message": "Hello world!"}
+        return APIResult.by_msg("Hello world!")

@@ -1,10 +1,10 @@
 import requests
 import config
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 
 
 class Ntfy(APIFunct):
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         body = {
             "topic": config.load_var("ntfy.default_topic"),
             "title": "New notification!",
@@ -15,4 +15,4 @@ class Ntfy(APIFunct):
             json=body,
         )
 
-        return {"ntfy": "Notification sent!"}
+        return APIResult.by_msg("Notification sent!")

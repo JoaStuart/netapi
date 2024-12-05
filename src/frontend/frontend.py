@@ -5,7 +5,7 @@ import traceback
 from typing import Any, Type
 import config
 from device import api
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 from locations import PL_FFUNC
 from utils import dumpb
 from webserver.webrequest import WebRequest, WebResponse
@@ -43,12 +43,10 @@ class FrontendRequest(WebRequest):
             )
 
         funcs = path.split("/")
-        response: dict[str, Any] | tuple[bytes, str] = {}
-        headers: dict[str, str] = {}
-        code: tuple[int, str] = (200, "OK")
+        response: APIResult = APIResult.empty()
 
         try:
-            perms: int = int(headers["Permissions"])
+            perms: int = int(self._recv_headers["Permissions"])
         except Exception:
             perms: int = 0
 
@@ -77,13 +75,7 @@ class FrontendRequest(WebRequest):
                                 ),
                             )
 
-                        res = c.api()
-
-                        if type(response) == dict:
-                            if type(res) == dict:
-                                response |= res
-                            else:
-                                response = res
+                        response.combine(fargs[0], c.api())
             except Exception:
                 LOG.exception(f"Exception on function `{".".join(fargs)}`")
                 return WebResponse(
@@ -97,11 +89,7 @@ class FrontendRequest(WebRequest):
                     ),
                 )
 
-        return WebResponse(
-            *code,
-            headers=headers,
-            body=dumpb(response) if isinstance(response, dict) else response,
-        )
+        return response.webresponse()
 
     def send_page(self, fname: str) -> None:
         """Disable public pages for frontend server"""

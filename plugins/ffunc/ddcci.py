@@ -15,7 +15,7 @@ from ctypes import (
 from threading import Thread
 import traceback
 
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 
 from ctypes import windll  # type: ignore    Linux does not know the `windll`
 
@@ -60,11 +60,11 @@ class DDC_CI(APIFunct):
         self.PHY_MONITORS = {}
         self._poll_monitors(poll_threaded)
 
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         ret = {}
         try:
             if len(self.args) < 2:
-                return {"ddcci": self.PHY_MONITORS}
+                return APIResult.by_json(self.PHY_MONITORS)
             elif len(self.args) == 2:
                 mon_arg = self.args[0]
                 monitor = []
@@ -117,7 +117,7 @@ class DDC_CI(APIFunct):
         for k, v in self.PHY_MONITORS.items():
             dxva2.DestroyPhysicalMonitor(k)
 
-        return {"ddcci": ret}
+        return APIResult.by_json(ret)
 
     def _poll_monitors(self, threaded: bool):
         hmon_list = self.__poll_hmonitors()

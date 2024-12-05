@@ -1,6 +1,6 @@
 import socket
 import config
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 
 
 class Wol(APIFunct):
@@ -15,15 +15,20 @@ class Wol(APIFunct):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.sendto(magic_packet, ("<broadcast>", 9))
 
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         if len(self.args) < 1:
-            return {"wol": "You need to provide the config name of the device to wake."}
+            return APIResult.by_msg(
+                "You need to provide the config name of the device to wake.",
+                success=False,
+            )
 
         try:
             mac = config.load_var(f"wol.{self.args[0]}")
         except:
-            return {"wol": "This device is not registered in the config!"}
+            return APIResult.by_msg(
+                "This device is not registered in the config!", success=False
+            )
 
         self._send_wol(str(mac))
 
-        return {"wol": "Sent wake up call."}
+        return APIResult.by_msg("Sent wake up call.")

@@ -1,6 +1,6 @@
 import ctypes
 import os
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 import locations
 
 
@@ -38,11 +38,11 @@ class InsydeDCHU:
 class PwrMode(APIFunct):
     """JoaLaptop specific BIOS API call to change PowerMode"""
 
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         dchu = InsydeDCHU()
 
         if len(self.args) == 0:
-            return {"pwrmode": dchu.get_power_mode()}
+            return APIResult.by_json(dchu.get_power_mode())
 
         try:
             pwrmode = int(self.args[0])
@@ -50,6 +50,6 @@ class PwrMode(APIFunct):
                 raise ValueError()
 
             dchu.set_power_mode(pwrmode)
-            return {}
+            return APIResult.by_success(True)
         except ValueError:
-            return {"pwrmode": "Not a valid PowerMode!"}
+            return APIResult.by_msg("Not a valid PowerMode!", success=False)

@@ -9,7 +9,7 @@ import requests
 
 from backend.interval import TimedExecutor
 import config
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 import locations
 
 LOGGER = logging.getLogger()
@@ -26,7 +26,7 @@ class Sky(APIFunct):
     FULL = False
     EXECUTOR: TimedExecutor | None = None
 
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         if len(self.args) > 0:
             match self.args[0].lower():
                 case "stop":
@@ -36,46 +36,46 @@ class Sky(APIFunct):
                 case "preview":
                     return self.preview()
                 case _:
-                    return {"sky": "Method not found"}
+                    return APIResult.by_msg("Method not found", success=False)
 
-        return {"sky": {"files": len(self._images())}}
+        return APIResult.by_json({"files": len(self._images())})
 
-    def stop(self) -> dict | tuple[bytes, str]:
+    def stop(self) -> APIResult:
         if Sky.EXECUTOR is not None:
             Sky.EXECUTOR.unregister()
             Sky.EXECUTOR = None
 
-            return {"sky": "Stopped"}
-        return {"sky": "No instance running"}
+            return APIResult.by_msg("Stopped")
+        return APIResult.by_msg("No instance running", success=False)
 
-    def start(self) -> dict | tuple[bytes, str]:
+    def start(self) -> APIResult:
         if Sky.EXECUTOR is None:
             Sky.EXECUTOR = TimedExecutor(self.INTERVAL, self.take_picture)
 
             for f in self._images():
                 os.remove(os.path.join(self.SAVE_FOLDER, f))
 
-            return {"sky": "Started"}
-        return {"sky": "Instance already running"}
+            return APIResult.by_msg("Started")
+        return APIResult.by_msg("Instance already running", success=False)
 
-    def preview(self) -> dict[str, str] | tuple[bytes, str]:
+    def preview(self) -> APIResult:
         cap = cv2.VideoCapture(self.CAMERA)
         if not cap.isOpened():
-            return {"sky": "Camera could not be opened!"}
+            return APIResult.by_msg("Camera could not be opened!", success=False)
 
         self._set_props(cap)
 
         result, image = cap.read()
 
         if not result:
-            return {"sky": "Image could not be taken"}
+            return APIResult.by_msg("Image could not be taken", success=False)
 
         result, buff = cv2.imencode(".jpg", image)
 
         if not result:
-            return {"sky": "Image could not be encoded"}
+            return APIResult.by_msg("Image could not be encoded", success=False)
 
-        return (buff.tobytes(), "image/jpeg")
+        return APIResult.by_data(buff.tobytes(), "image/jpeg")
 
     def _images(self) -> list[str]:
         return [f for f in os.listdir(self.SAVE_FOLDER) if f.endswith(".jpg")]

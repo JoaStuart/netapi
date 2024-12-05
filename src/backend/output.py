@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Type
 
+from device.api import APIResult
 from device.pluginloader import load_plugins
 from locations import PL_OUTPUT
 
@@ -32,18 +33,6 @@ class OutputDevice(ABC):
         """
 
         return {}
-
-    def api_response(self, orig: tuple[int, str]) -> tuple[int, str]:
-        """Response code and message for the api request
-
-        Args:
-            orig (tuple[int, str]): Original response
-
-        Returns:
-            tuple[int, str]: Response after changes from this api call
-        """
-
-        return orig
 
 
 class DefaultOutput(OutputDevice):

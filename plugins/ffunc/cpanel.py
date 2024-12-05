@@ -1,14 +1,3 @@
-import os
-import threading
-from typing import Any
-
-import pystray
-from device.api import APIFunct
-from device.device import DEV_PORT, FrontendDevice
-from frontend.systray import SysTray
-import locations
-from pathlib import Path
-
 from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile
 from PyQt5.QtWebEngineCore import (
@@ -18,32 +7,15 @@ from PyQt5.QtWebEngineCore import (
 )
 from PyQt5.QtCore import QUrl, QByteArray, QBuffer
 
+from device.device import DEV_PORT, FrontendDevice
+from frontend.systray import SysTray
+import threading
+from typing import Any
+from webclient.client_request import WebClient, WebMethod
+import pystray
+
 
 from proj_types.singleton import singleton
-import utils
-from webclient.client_request import WebClient, WebMethod
-
-
-class CPanel(APIFunct):
-    LOCALROOT = os.path.join(locations.PL_FFUNC, "cpanel")
-
-    def is_in_subdir(self, file: str) -> bool:
-        file_path = Path(file).resolve()
-        directory = Path(CPanel.LOCALROOT).resolve()
-
-        return directory in file_path.parents
-
-    def api(self) -> dict | tuple[bytes, str]:
-        path = "/".join(self.args)
-        file = os.path.join(CPanel.LOCALROOT, path)
-        if not (os.path.isfile(file) and self.is_in_subdir(file)):
-            return {"cpanel": {"code": 404, "message": "File not found!"}}
-
-        with open(file, "rb") as rf:
-            return (rf.read(), utils.mime_by_ext(os.path.splitext(file)[1]))
-
-    def permissions(self, _: int) -> int:
-        return 100
 
 
 class CPanelRequestScheme(QWebEngineUrlSchemeHandler):
@@ -53,29 +25,29 @@ class CPanelRequestScheme(QWebEngineUrlSchemeHandler):
             return
 
         resp = (
-            WebClient(
-                self._frontend._ip, DEV_PORT
-            )  # TODO take from FrontendDevice's prepare method
-            .set_path(f"/cpanel.{request.requestUrl().path()}")
-            .set_secure(True)
+            FrontendDevice("")
+            ._action_client(
+                f"/cpanel.{request.requestUrl().path().replace(".", ":").replace("/", ".")}"
+            )
             .set_method(WebMethod(request.requestMethod().data().decode().upper()))
-            .authorize(FrontendDevice("")._token)
             .send()
         )
 
         data = resp.body
-        mime = resp.get_header("Content-Type", "text/plain")
+        self._mime = resp.get_header("Content-Type", "text/plain")
 
         self._data = QByteArray(data)
 
         buffer = QBuffer(request)
         buffer.setData(self._data)
 
-        request.reply(QByteArray(mime), buffer)
+        request.reply(QByteArray(self._mime), buffer)
 
 
 @singleton
 class CPanelBrowser(QMainWindow):
+    SCHEME = b"cpanel"
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -83,19 +55,28 @@ class CPanelBrowser(QMainWindow):
 
         self.browser = QWebEngineView()
         self.setCentralWidget(self.browser)
+        self.browser.showMaximized()
 
         self.handler = CPanelRequestScheme()
         profile = QWebEngineProfile.defaultProfile()
         if profile:
-            profile.installUrlSchemeHandler(b"cpanel", self.handler)
+            profile.installUrlSchemeHandler(CPanelBrowser.SCHEME, self.handler)
 
-        self.browser.setUrl(QUrl("cpanel:///"))
+        self.browser.load(QUrl("cpanel:///test.txt"))
 
-    def show(self) -> None:
-        pass
+    @staticmethod
+    def register_scheme():
+        scheme = QWebEngineUrlScheme(CPanelBrowser.SCHEME)
+        scheme.setFlags(
+            QWebEngineUrlScheme.SecureScheme | QWebEngineUrlScheme.LocalAccessAllowed
+        )
+        scheme.setSyntax(QWebEngineUrlScheme.Syntax.Path)
+        scheme.setDefaultPort(80)
+        QWebEngineUrlScheme.registerScheme(scheme)
 
 
 def open() -> None:
+    CPanelBrowser.register_scheme()
     app = QApplication([])
     panel = CPanelBrowser()
     panel.show()

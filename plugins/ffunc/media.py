@@ -1,5 +1,5 @@
 import asyncio
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionManager as MediaManager,
 )
@@ -8,7 +8,7 @@ from winrt.windows.media.control import (
 class Media(APIFunct):
     """Windows specific media session lookup and control."""
 
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         if len(self.args) == 1:
 
             async def control(cs: str):
@@ -31,9 +31,9 @@ class Media(APIFunct):
                     return True
 
             return (
-                {}
+                APIResult.by_success(True)
                 if asyncio.run(control(self.args[0]))
-                else {"media": f"Function {self.args[0]} failed."}
+                else APIResult.by_msg(f"Function {self.args[0]} failed.", success=False)
             )
 
         async def get_media_info():
@@ -50,4 +50,4 @@ class Media(APIFunct):
                 return {"media": info_dict}
             return {"media": "No media playing"}
 
-        return asyncio.run(get_media_info())
+        return APIResult.by_json(asyncio.run(get_media_info()))

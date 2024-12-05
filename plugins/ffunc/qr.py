@@ -8,11 +8,11 @@ import pyzbar.pyzbar
 from threading import Thread
 from tkinter import messagebox
 
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 
 
 class ScreenQR(APIFunct):
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         code_list: list[str] = []
 
         with mss.mss() as sct:
@@ -32,9 +32,7 @@ class ScreenQR(APIFunct):
         if len(self.args) > 0 and self.args[0] == "prompt":
             Thread(target=self.ask_all_links, args=(code_list,)).start()
 
-        return {
-            "qr": code_list,
-        }
+        return APIResult.by_json(code_list)
 
     def ask_all_links(self, code_list: list[str]):
         if len(code_list) == 0:

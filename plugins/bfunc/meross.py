@@ -3,15 +3,16 @@ import os
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.manager import MerossManager
 
-from device.api import APIFunct
+from device.api import APIFunct, APIResult
 
 
 class Meross(APIFunct):
-    def api(self) -> dict | tuple[bytes, str]:
+    def api(self) -> APIResult:
         if len(self.args) != 2:
-            return {
-                "meross": "Usage: `/meross.<on/off>.<channel>` or `/meross.<on/off>.<device>.<channel>`"
-            }
+            return APIResult.by_msg(
+                "Usage: `/meross.<on/off>.<channel>` or `/meross.<on/off>.<device>.<channel>`",
+                success=False,
+            )
 
         try:
             device = 0 if len(self.args) == 2 else int(self.args[1])
@@ -19,9 +20,9 @@ class Meross(APIFunct):
 
             return asyncio.run(self.aapi(device, channel))
         except Exception:
-            return {"meross": "Argument 2 must be a channel!"}
+            return APIResult.by_msg("Argument 2 must be a channel!", success=False)
 
-    async def aapi(self, device: int, channel: int) -> dict | tuple[bytes, str]:
+    async def aapi(self, device: int, channel: int) -> APIResult:
         client = await MerossHttpClient.async_from_user_password(
             api_base_url="https://iotx-eu.meross.com",
             email=os.environ["MEROSS_MAIL"],
@@ -33,7 +34,7 @@ class Meross(APIFunct):
 
         devices = manager.find_devices()
         if len(devices) < 1:
-            return {"meross": "No devices found"}
+            return APIResult.by_msg("No devices found", success=False)
 
         dev = devices[device]
 
@@ -42,9 +43,9 @@ class Meross(APIFunct):
         elif self.args[0] == "off":
             await dev.async_turn_off(channel=channel)
         else:
-            return {"meross": "Argument 1 must be on/off"}
+            return APIResult.by_msg("Argument 1 must be on/off", success=False)
 
         manager.close()
         await client.async_logout()
 
-        return {}
+        return APIResult.by_success(True)
