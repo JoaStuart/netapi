@@ -107,7 +107,7 @@ class WebRequest:
         gargs = status.pop(0).split("?", 1)
         self.version = " ".join(status).strip()
         if self.version.lower() != "http/1.1":
-            raise ValueError("Invalid version for request")
+            raise ValueError(f"Invalid version for request: {self.version.lower()}")
 
         self.path = gargs[0]
 

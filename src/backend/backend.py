@@ -46,6 +46,21 @@ class BackendRequest(WebRequest):
 
         self.perms: PermissionLevel = DefaultPermissions()
         self.dev: Device | None = None
+        self.if_result: APIResult | None = (
+            APIResult.empty()
+        )  # None when expecting new value
+
+    def set_result(self, name: str, result: APIResult) -> None:
+        if self.if_result is None:
+            self.if_result = result
+        else:
+            self.response.combine(name, result)
+
+    def check_if(self) -> bool:
+        if self.if_result is None:
+            return True
+
+        return self.if_result.success
 
     def REQUEST(self, pth: str, body: dict) -> WebResponse:
         """Method that gets executed upon a request
@@ -67,6 +82,22 @@ class BackendRequest(WebRequest):
             if len(k) == 0:
                 continue
             fargs = k.split(".")
+
+            if fargs[0].startswith(">"):
+                LOG.debug("Checking IF")
+                self.if_result = None
+                fargs[0] = fargs[0][1:]
+
+            if fargs[0].startswith("+"):
+                LOG.debug("Executing THEN")
+                if not self.check_if():
+                    continue
+                fargs[0] = fargs[0][1:]
+            elif fargs[0].startswith("-"):
+                LOG.debug("Executing ELSE")
+                if self.check_if():
+                    continue
+                fargs[0] = fargs[0][1:]
 
             try:
                 if r := self._handle(fargs, body):
@@ -209,7 +240,7 @@ class BackendRequest(WebRequest):
                 api = fclass(self, fargs[1:], body)
                 self._check_permissions(api.permissions(50), fargs)
 
-                self.response.combine(fargs[0], api.api())
+                self.set_result(fargs[0], api.api())
 
                 return True
 
@@ -234,11 +265,11 @@ class BackendRequest(WebRequest):
                 data, tpe = resp.body
                 if tpe.lower() == "application/json":
                     jdta = json.loads(data)
-                    self.response.combine(
+                    self.set_result(
                         fargs[0], APIResult.by_json(jdta, success=resp.code == 200)
                     )
                 else:
-                    self.response.combine(
+                    self.set_result(
                         fargs[0], APIResult.by_data(data, tpe, success=resp.code == 200)
                     )
             return True

@@ -1,10 +1,13 @@
 import base64
 import json
+import logging
 import socket
 from typing import Any
 import config
 from device.api import APIFunct, APIResult
 from webserver.webrequest import WebRequest
+
+LOG = logging.getLogger()
 
 
 class GoveeLive:
@@ -61,6 +64,28 @@ class GoveeLight:
     def test(self) -> None:
         self.__send_instr("devStatus", {})
 
+    def check(self) -> bool:
+        srv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        srv.bind(("", 4002))
+        srv.settimeout(5)
+
+        self.__send_instr("devStatus", {})
+
+        try:
+            while True:
+                data, _ = srv.recvfrom(1024)
+
+                jdata = json.loads(data)
+                msg = jdata.get("msg", {})
+                if msg.get("cmd", "") == "devStatus":
+                    return bool(msg.get("data", {}).get("onOff", 0))
+        except socket.timeout:
+            LOG.info("Govee device did not respond!")
+        finally:
+            srv.close()
+
+        return False
+
     def append_checksum(self, d: bytearray) -> None:
         check = 0
         for i in d:
@@ -98,6 +123,11 @@ class Govee(APIFunct):
                         return APIResult.by_msg(
                             "Brightness value must be an int", success=False
                         )
+            case "status":
+                status = self._govee.check()
+                return APIResult.by_msg(
+                    f"Device {"on" if status else "off"}", success=status
+                )
             case _:
                 return APIResult.by_msg("SubFunction not found!", success=False)
         return APIResult.by_success(True)
