@@ -1,7 +1,7 @@
 from typing import Any
 import cv2
 from backend.output import OutputDevice
-from utils import img_b64
+import config
 
 
 class StreamDeck(OutputDevice):
@@ -11,7 +11,12 @@ class StreamDeck(OutputDevice):
             sd["image"] = self.data["image"]
         if "title" in self.data:
             sd["title"] = self.data["title"]
-        if "alert" in self.data and self.data["alert"] in ["ok", "alert"]:
+
+        alerts = ["alert"]
+        if config.load_var("sd.checkmark"):
+            alerts.append("ok")
+
+        if "alert" in self.data and self.data["alert"] in alerts:
             sd[self.data["alert"]] = True
 
         return {"streamdeck": sd}
