@@ -1,9 +1,7 @@
 import logging
-import os
 from socket import socket
 import traceback
 from typing import Any, Type
-import config
 from device import api
 from device.api import APIFunct, APIResult
 from locations import PL_FFUNC

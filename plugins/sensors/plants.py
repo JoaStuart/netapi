@@ -19,7 +19,7 @@ class Plants(Sensor):
         super().__init__(30)
 
     def poll(self) -> None:
-        port = config.load_str("plants.port")
+        port = config.load("plants.port", str)
         f = open(port)
         attrs = termios.tcgetattr(f)
         attrs[2] = attrs[2] & termios.HUPCL
@@ -55,8 +55,8 @@ class Plants(Sensor):
             return {}
 
         pdata = self.data[str(pid)]
-        critical = config.load_list("plants.critical")
-        names = config.load_list("plants.names")
+        critical = config.load("plants.critical", list)
+        names = config.load("plants.names", list)
 
         pcrit = critical[pid]
         isok = pcrit < float(pdata)

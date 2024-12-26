@@ -9,10 +9,9 @@ from backend.automation import Automation
 from backend.event import Event
 from backend.multicast_srv import MulticastServer
 from device.device import DEV_PORT
-from config import load_envvars
 from frontend.multicast_cli import MulticastClient
 from locations import VERSION
-import config
+from config import Config
 import locations
 from proj_types.cleanup import CleanUp, CleanupHandler
 from quickaction.quickaction import Quickaction
@@ -178,7 +177,7 @@ def main() -> int:
     args = parse_args()
 
     setup_logger(args.verbose)
-    load_envvars()
+    Config().load_envvars()
 
     locations.make_dirs()
 

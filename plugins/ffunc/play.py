@@ -26,7 +26,7 @@ class Play(APIFunct):
                     if not isinstance(k, dict):
                         continue
 
-                    if k.get("name", "").startswith(config.load_str("play.outdevice")):
+                    if k.get("name", "").startswith(config.load("play.outdevice", str)):
                         idx = k.get("index", -1)
                         break
                 if idx >= 0:

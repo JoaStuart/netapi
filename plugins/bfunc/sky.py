@@ -1,9 +1,7 @@
-import io
 import os
 import cv2
 import time
 import logging
-from threading import Thread
 
 import requests
 
@@ -16,12 +14,12 @@ LOGGER = logging.getLogger()
 
 
 class Sky(APIFunct):
-    WIDTH: int = config.load_int("sky.width")
-    HEIGHT: int = config.load_int("sky.height")
-    CAMERA: int = config.load_int("sky.camera")
-    INTERVAL: int = config.load_int("sky.interval")
-    SAVE_TIME: int = config.load_int("sky.save_time")
-    SAVE_FOLDER = os.path.join(locations.ROOT, config.load_str("sky.save_folder"))  # type: ignore
+    WIDTH: int = config.load("sky.width", int)
+    HEIGHT: int = config.load("sky.height", int)
+    CAMERA: int = config.load("sky.camera", int)
+    INTERVAL: int = config.load("sky.interval", int)
+    SAVE_TIME: int = config.load("sky.save_time", int)
+    SAVE_FOLDER = os.path.join(locations.ROOT, config.load("sky.save_folder", str))
 
     FULL = False
     EXECUTOR: TimedExecutor | None = None

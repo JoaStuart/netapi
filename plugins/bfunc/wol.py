@@ -23,7 +23,7 @@ class Wol(APIFunct):
             )
 
         try:
-            mac = config.load_str(f"wol.{self.args[0]}")
+            mac = config.load(f"wol.{self.args[0]}", str)
         except:
             return APIResult.by_msg(
                 "This device is not registered in the config!", success=False

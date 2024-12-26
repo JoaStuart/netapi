@@ -12,15 +12,14 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from hashlib import md5
 import random
 
-import requests
-
 import config
 from locations import VERSION
 import locations
 from proj_types.event_type import EventType
 from proj_types.singleton import singleton
 from proj_types.cleanup import CleanUp
-from utils import CaseInsensitiveDict, dumpb, get_os_name
+from proj_types.ci_dict import CaseInsensitiveDict
+from utils import dumpb, get_os_name
 from webclient.client_request import WebClient, WebMethod
 from webserver.webrequest import WebResponse
 
@@ -303,7 +302,7 @@ class FrontendDevice(CleanUp):
             .set_json(
                 {
                     "funcs": funcs,
-                    "subdevices": config.load_list("subdevices"),
+                    "subdevices": config.load("subdevices", list),
                     "version": version,
                     "os": get_os_name(),
                     "type": DeviceType.NORMAL.value,

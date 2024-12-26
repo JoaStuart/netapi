@@ -1,8 +1,5 @@
-import socket
-from typing import Any, TypeVar
-
 from encryption.enc_socket import EncryptedSocket
-from utils import CaseInsensitiveDict
+from proj_types.ci_dict import CaseInsensitiveDict
 
 
 class ClientResponse:
