@@ -16,12 +16,12 @@ LOGGER = logging.getLogger()
 
 
 class Sky(APIFunct):
-    WIDTH: int = config.load_var("sky.width")  # type: ignore
-    HEIGHT: int = config.load_var("sky.height")  # type: ignore
-    CAMERA: int = config.load_var("sky.camera")  # type: ignore
-    INTERVAL: int = config.load_var("sky.interval")  # type: ignore
-    SAVE_TIME: int = config.load_var("sky.save_time")  # type: ignore
-    SAVE_FOLDER = os.path.join(locations.ROOT, config.load_var("sky.save_folder"))  # type: ignore
+    WIDTH: int = config.load_int("sky.width")
+    HEIGHT: int = config.load_int("sky.height")
+    CAMERA: int = config.load_int("sky.camera")
+    INTERVAL: int = config.load_int("sky.interval")
+    SAVE_TIME: int = config.load_int("sky.save_time")
+    SAVE_FOLDER = os.path.join(locations.ROOT, config.load_str("sky.save_folder"))  # type: ignore
 
     FULL = False
     EXECUTOR: TimedExecutor | None = None

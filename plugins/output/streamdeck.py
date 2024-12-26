@@ -13,7 +13,7 @@ class StreamDeck(OutputDevice):
             sd["title"] = self.data["title"]
 
         alerts = ["alert"]
-        if config.load_var("sd.checkmark"):
+        if config.load_bool("sd.checkmark"):
             alerts.append("ok")
 
         if "alert" in self.data and self.data["alert"] in alerts:

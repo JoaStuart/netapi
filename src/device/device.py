@@ -303,7 +303,7 @@ class FrontendDevice(CleanUp):
             .set_json(
                 {
                     "funcs": funcs,
-                    "subdevices": config.load_var("subdevices"),
+                    "subdevices": config.load_list("subdevices"),
                     "version": version,
                     "os": get_os_name(),
                     "type": DeviceType.NORMAL.value,

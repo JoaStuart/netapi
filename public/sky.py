@@ -8,9 +8,9 @@ from webserver.sitescript import SiteScript
 
 
 class PublicSky(SiteScript):
-    SAVE_FOLDER: str = config.load_var("sky.save_folder")  # type: ignore
-    WIDTH: int = config.load_var("sky.width")  # type: ignore
-    HEIGHT: int = config.load_var("sky.height")  # type: ignore
+    SAVE_FOLDER: str = config.load_str("sky.save_folder")
+    WIDTH: int = config.load_int("sky.width")
+    HEIGHT: int = config.load_int("sky.height")
 
     def display(self) -> None:
         self.headers |= {"Content-Disposition": 'attachment; filename="sky.mp4"'}

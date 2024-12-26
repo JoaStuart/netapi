@@ -6,12 +6,12 @@ from device.api import APIFunct, APIResult
 class Ntfy(APIFunct):
     def api(self) -> APIResult:
         body = {
-            "topic": config.load_var("ntfy.default_topic"),
+            "topic": config.load_str("ntfy.default_topic"),
             "title": "New notification!",
         } | self.body
 
         requests.post(
-            f"http://{config.load_var("ntfy.ip")}:{config.load_var("ntfy.port")}/",
+            f"http://{config.load_str("ntfy.ip")}:{config.load_str("ntfy.port")}/",
             json=body,
         )
 

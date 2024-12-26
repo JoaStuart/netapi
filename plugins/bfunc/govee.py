@@ -266,8 +266,7 @@ class Govee(APIFunct):
         self, request: WebRequest, args: list[str], body: dict[str, Any]
     ) -> None:
         super().__init__(request, args, body)
-        self._govee = GoveeLight(str(config.load_var("govee.ip")))
-
+        self._govee = GoveeLight(config.load_str("govee.ip"))
     def api(self) -> APIResult:
         if len(self.args) == 0:
             return APIResult.by_success(False)

@@ -19,7 +19,7 @@ class Plants(Sensor):
         super().__init__(30)
 
     def poll(self) -> None:
-        port = str(config.load_var("plants.port"))
+        port = config.load_str("plants.port")
         f = open(port)
         attrs = termios.tcgetattr(f)
         attrs[2] = attrs[2] & termios.HUPCL
@@ -55,15 +55,8 @@ class Plants(Sensor):
             return {}
 
         pdata = self.data[str(pid)]
-        critical = config.load_var("plants.critical")
-        if not isinstance(critical, list):
-            LOG.warning("config::plants.critical must be list[float]")
-            return {}
-
-        names = config.load_var("plants.names")
-        if not isinstance(names, list):
-            LOG.warning("config::plants.names must be list[str]")
-            return {}
+        critical = config.load_list("plants.critical")
+        names = config.load_list("plants.names")
 
         pcrit = critical[pid]
         isok = pcrit < float(pdata)

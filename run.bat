@@ -10,7 +10,6 @@ if not exist "%PYTHON_SCRIPT%" (
     exit /b 1
 )
 
-:loop
 REM Run the Python script with all provided arguments
 python "%PYTHON_SCRIPT%" %*
 set EXIT_CODE=%ERRORLEVEL%
