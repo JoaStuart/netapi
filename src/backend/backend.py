@@ -145,7 +145,7 @@ class BackendRequest(WebRequest):
         if device is None:
             return
 
-        token = self._recv_headers.get("Authorization")
+        token = self._recv_headers.get("Authorization", None)
         if token is None:
             return
 

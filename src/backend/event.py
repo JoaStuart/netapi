@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import Enum
 import json
 import logging
 import os
@@ -12,9 +11,6 @@ from proj_types.event_type import EventType
 
 
 LOG = logging.getLogger()
-
-type JsonObject = dict[str, Any]
-type JsonList = list[Any]
 
 
 class Event:
@@ -29,7 +25,7 @@ class Event:
         dir = locations.AUTOMATION
 
         for k in os.listdir(dir):
-            if k.startswith("_"):
+            if not k.endswith(".json") or k.startswith("_"):
                 continue
 
             with open(os.path.join(dir, k), "r") as rf:
@@ -64,7 +60,7 @@ class Event:
         try:
             tpe = EventType[data.get("event", "")]
             title: str = data.get("title", "No title!")
-            actions: JsonList = data.get("actions", [])
+            actions: list[Any] = data.get("actions", [])
 
             e = Event(tpe, title, actions)
 
@@ -82,7 +78,7 @@ class Event:
         self,
         event: EventType,
         title: str,
-        actions: JsonList,
+        actions: list[Any],
     ) -> None:
         self._event = event
         self._title = title
@@ -168,7 +164,7 @@ class Event:
 
         return data
 
-    def check_time(self, action: JsonObject) -> bool:
+    def check_time(self, action: dict[str, Any]) -> bool:
         """Checks if the time set in the event matches the time we have
 
         Returns:

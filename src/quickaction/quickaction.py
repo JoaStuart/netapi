@@ -21,8 +21,10 @@ class Quickaction(Enum):
         path = os.path.abspath(os.path.dirname(__file__))
 
         for name, _ in Quickaction._member_map_.items():
-            Quickaction.generate_bat(ip, path, name)
-            Quickaction.generate_sh(ip, path, name)
+            if os.name == "nt":
+                Quickaction.generate_bat(ip, path, name)
+            elif os.name == "posix":
+                Quickaction.generate_sh(ip, path, name)
 
     @staticmethod
     def generate_bat(ip: str, path: str, name: str) -> None:

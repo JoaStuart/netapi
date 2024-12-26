@@ -12,6 +12,8 @@ import locations
 
 class MulticastServer:
     KEY_SIZE = 2048
+    KEY_PRIVATE = os.path.join(locations.RESOURCES, "multicast_priv.rsa")
+    KEY_PUBLIC = os.path.join(locations.PUBLIC, "multicast.rsa")
 
     def __init__(self) -> None:
         self._ip = self._get_local_addr()
@@ -20,7 +22,6 @@ class MulticastServer:
             locations.MULTICAST_PORT,
         )
 
-        self._key_path = os.path.join(locations.RESOURCES, "multicast_priv.rsa")
         self._private_key = self._load_key()
 
     def _load_key(self) -> rsa.RSAPrivateKey:
@@ -47,10 +48,10 @@ class MulticastServer:
             rsa.RSAPrivateKey | None: The key loaded or None if file is not found or not a RSA private key.
         """
 
-        if not os.path.isfile(self._key_path):
+        if not os.path.isfile(self.KEY_PRIVATE):
             return None
 
-        with open(self._key_path, "rb") as rf:
+        with open(self.KEY_PRIVATE, "rb") as rf:
             data = rf.read()
 
         key = serialization.load_pem_private_key(data, None, default_backend())
@@ -72,14 +73,14 @@ class MulticastServer:
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption(),
         )
-        with open(self._key_path, "wb") as wf:
+        with open(self.KEY_PRIVATE, "wb") as wf:
             wf.write(priv_bytes)
 
         publ_bytes = priv_key.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
-        with open(os.path.join(locations.PUBLIC, "multicast.rsa"), "wb") as wf:
+        with open(self.KEY_PUBLIC, "wb") as wf:
             wf.write(publ_bytes)
 
     def _get_local_addr(self) -> str:

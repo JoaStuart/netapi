@@ -4,11 +4,11 @@ import random
 
 
 class DHAlgorithm:
+    G = 2
+    P = 0xFFFFFFFF_FFFFFFFF_C90FDAA2_2168C234_C4C6628B_80DC1CD1_29024E08_8A67CC74_020BBEA6_3B139B22_514A0879_8E3404DD_EF9519B3_CD3A431B_302B0A6D_F25F1437_4FE1356D_6D51C245_E485B576_625E7EC6_F44C42E9_A637ED6B_0BFF5CB6_F406B7ED_EE386BFB_5A899FA5_AE9F2411_7C4B1FE6_49286651_ECE45B3D_C2007CB8_A163BF05_98DA4836_1C55D39A_69163FA8_FD24CF5F_83655D23_DCA3AD96_1C62F356_208552BB_9ED52907_7096966D_670C354E_4ABC9804_F1746C08_CA18217C_32905E46_2E36CE3B_E39E772C_180E8603_9B2783A2_EC07A28F_B5C55DF0_6F4C52C9_DE2BCBF6_95581718_3995497C_EA956AE5_15D22618_98FA0510_15728E5A_8AACAA68_FFFFFFFF_FFFFFFFF
+    Q = P // 2
+    
     def __init__(self) -> None:
-        self._g = 2
-        self._p = 0xFFFFFFFF_FFFFFFFF_C90FDAA2_2168C234_C4C6628B_80DC1CD1_29024E08_8A67CC74_020BBEA6_3B139B22_514A0879_8E3404DD_EF9519B3_CD3A431B_302B0A6D_F25F1437_4FE1356D_6D51C245_E485B576_625E7EC6_F44C42E9_A637ED6B_0BFF5CB6_F406B7ED_EE386BFB_5A899FA5_AE9F2411_7C4B1FE6_49286651_ECE45B3D_C2007CB8_A163BF05_98DA4836_1C55D39A_69163FA8_FD24CF5F_83655D23_DCA3AD96_1C62F356_208552BB_9ED52907_7096966D_670C354E_4ABC9804_F1746C08_CA18217C_32905E46_2E36CE3B_E39E772C_180E8603_9B2783A2_EC07A28F_B5C55DF0_6F4C52C9_DE2BCBF6_95581718_3995497C_EA956AE5_15D22618_98FA0510_15728E5A_8AACAA68_FFFFFFFF_FFFFFFFF
-        self._q = self._p // 2
-
         self._K: int | None = None
 
     def make_enc_key(self, length: int) -> bytes:
@@ -66,7 +66,7 @@ class DHServer(DHAlgorithm):
     def __init__(self) -> None:
         super().__init__()
 
-        self._y = random.randint(1, self._q - 1)
+        self._y = random.randint(1, self.Q - 1)
 
     def read_e(self, e: int) -> None:
         """
@@ -74,7 +74,7 @@ class DHServer(DHAlgorithm):
             e (int): Value of `e` sent by the client
         """
 
-        self._K = pow(e, self._y, self._p)
+        self._K = pow(e, self._y, self.P)
 
     def get_f(self) -> int:
         """
@@ -82,7 +82,7 @@ class DHServer(DHAlgorithm):
             int: The local value of `f`
         """
 
-        f = pow(self._g, self._y, self._p)
+        f = pow(self.G, self._y, self.P)
         return f
 
 
@@ -90,7 +90,7 @@ class DHClient(DHAlgorithm):
     def __init__(self) -> None:
         super().__init__()
 
-        self._x = random.randint(2, self._q - 1)
+        self._x = random.randint(2, self.Q - 1)
 
     def read_f(self, f: int):
         """
@@ -98,7 +98,7 @@ class DHClient(DHAlgorithm):
             f (int): Value of `f` sent by the server
         """
 
-        self._K = pow(f, self._x, self._p)
+        self._K = pow(f, self._x, self.P)
 
     def get_e(self) -> int:
         """
@@ -106,4 +106,4 @@ class DHClient(DHAlgorithm):
             int: The local value of `e`
         """
 
-        return pow(self._g, self._x, self._p)
+        return pow(self.G, self._x, self.P)

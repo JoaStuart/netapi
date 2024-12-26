@@ -24,7 +24,7 @@ class Automation:
     @staticmethod
     def load_all() -> None:
         for f in os.listdir(locations.AUTOMATION):
-            if not f.endswith(".json"):
+            if not f.endswith(".json") or f.startswith("_"):
                 continue
 
             with open(os.path.join(locations.AUTOMATION, f), "r") as rf:

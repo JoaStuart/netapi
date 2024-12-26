@@ -1,11 +1,8 @@
 import base64
-import hashlib
 import logging
 import os
 import socket
-import struct
 from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
 import locations
@@ -15,10 +12,10 @@ LOG = logging.getLogger()
 
 
 class MulticastClient:
+    KEY_PUBLIC = os.path.join(locations.PUBLIC, "multicast.rsa")
+    
     def __init__(self) -> None:
-        self._key_path = os.path.join(locations.RESOURCES, "multicast_publ.rsa")
-
-        self._priv_key = self._load_key()
+        self._publ_key = self._load_key()
         self._enc_text = self._make_random_text()
 
     def _load_key(self) -> rsa.RSAPublicKey:
@@ -32,10 +29,10 @@ class MulticastClient:
             rsa.RSAPublicKey: The public key of the server we are trying to connect to
         """
 
-        if not os.path.isfile(self._key_path):
+        if not os.path.isfile(self.KEY_PUBLIC):
             raise FileNotFoundError("No public key found!")
 
-        with open(self._key_path, "rb") as rf:
+        with open(self.KEY_PUBLIC, "rb") as rf:
             data = rf.read()
 
         key = serialization.load_pem_public_key(data, None)
@@ -49,13 +46,11 @@ class MulticastClient:
         """Generates a random text and hashes it
 
         Returns:
-            str: The random hash used for server validation
+            str: The random string used for server validation
         """
 
         rng_bytes = os.urandom(64)
-
-        h = hashlib.sha1(rng_bytes)
-        return h.hexdigest()
+        return rng_bytes.hex()
 
     def _verify(self, response: dict[str, str]) -> bool:
         """Verifies that the gotten response is from the server we have the public key of
@@ -71,7 +66,7 @@ class MulticastClient:
             return False
 
         try:
-            self._priv_key.verify(
+            self._publ_key.verify(
                 base64.standard_b64decode(response["authorization"]),
                 self._enc_text.encode(),
                 padding.PSS(
