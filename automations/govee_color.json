@@ -1,0 +1,22 @@
+{
+  "@type": "event",
+  "title": "Govee Color",
+  "event": "SUNSET",
+  "actions": [
+    {
+      "time": "$day >= $1.12. and $day < $30.12.",
+      "path": "/govee.scene.ColorChristmas",
+      "body": {}
+    },
+    {
+      "time": "$day >= $30.12. or $day < $7.1.",
+      "path": "/govee.scene.ColorSilvester",
+      "body": {}
+    },
+    {
+      "else": true,
+      "path": "/govee.scene.ColorDefault",
+      "body": {}
+    }
+  ]
+}

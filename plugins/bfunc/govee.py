@@ -1,8 +1,11 @@
 import base64
 import json
 import logging
+import os
 import socket
-from typing import Any
+from typing import Any, Optional, Type, TypeVar
+
+import requests
 import config
 from device.api import APIFunct, APIResult
 from webserver.webrequest import WebRequest
@@ -10,37 +13,202 @@ from webserver.webrequest import WebRequest
 LOG = logging.getLogger()
 
 
-class GoveeLive:
-    element_count = 36
+class GoveeParameter:
+    @staticmethod
+    def of(data: dict[str, Any]) -> "GoveeParameter":
+        for k, v in GoveeParameter.instances().items():
+            if k == data["dataType"]:
+                return v(data)
 
-    def __init__(self, parent) -> None:
-        self.parent = parent
-        parent._GoveeLight__send_instr("razer", {"pt": "uwABsQEK"})
+        return GoveeParameter(data)
 
-    def new_cols(self) -> list[tuple[int, int, int]]:
-        col_arr = []
-        for _ in range(36):
-            col_arr.append((0, 0, 0))
-        return col_arr
+    @staticmethod
+    def instances() -> "dict[str, Type[GoveeParameter]]":
+        return {
+            "ENUM": GoveeEnum,
+        }
 
-    def __append_col(self, d: bytearray, col2: bool, col: tuple[int, int, int]) -> None:
-        for c in col:
-            d.append(c)
-        d.append(2 if col2 else 1)
+    def __init__(self, data: dict[str, Any]):
+        self._data = data
 
-    def send_cols(self, col_arr: list[tuple[int, int, int]]) -> None:
-        barr = bytearray(b"\xbb\x00\x86\xb4\x00")
-        barr.append(self.element_count)
-        idx = 0
-        for _ in range(self.element_count):
-            self.__append_col(barr, False, col_arr[idx])
-            idx += 1
+    def __str__(self):
+        return f"<GoveeParameter {self._data}"
 
-        self.parent.append_checksum(barr)
 
-        self.parent._GoveeLight__send_instr(
-            "razer", {"pt": base64.standard_b64encode(barr).decode()}
+class GoveeEnum(GoveeParameter):
+    def __init__(self, data):
+        super().__init__(data)
+
+        self._options: dict[str, Any] = {}
+
+        for k in data["options"]:
+            self._options[k["name"]] = k["value"]
+
+    def __getitem__(self, key: str) -> Any:
+        return self._options[key]
+
+    def __str__(self):
+        return f"<GoveeParameter:ENUM {self._options}>"
+
+    def __contains__(self, val: str) -> bool:
+        return val in self._options
+
+
+_T = TypeVar("_T", bound="GoveeParameter")
+
+
+class GoveeCapability:
+    def __init__(
+        self, type: str, instance: str, parameter: dict[str, Any], device: "GoveeDevice"
+    ):
+        self._type = type
+        self._instance = instance
+        self._parameter = GoveeParameter.of(parameter)
+        self._device = device
+
+    @property
+    def type(self) -> str:
+        return self._type
+
+    @property
+    def instance(self) -> str:
+        return self._instance
+
+    def __str__(self):
+        return f"<{self.type}:{self.instance}{self._parameter}>"
+
+    def set(self, value: Any) -> dict[str, Any]:
+        return self._device.set(self._type, self._instance, value)
+
+    def parameter(self, expected: Type[_T]) -> _T:
+        if not isinstance(self._parameter, expected):
+            raise ValueError("Not expected parameter")
+
+        return self._parameter
+
+
+class GoveeCapabilityList:
+    def __init__(self):
+        self._capabilities: list[GoveeCapability] = []
+
+    def append(self, capab: GoveeCapability):
+        self._capabilities.append(capab)
+
+    def __call__(self, type: str, instance: str) -> "GoveeCapabilityList":
+        lst = GoveeCapabilityList()
+
+        for c in self._capabilities:
+            if (type is None or c.type == type) and (
+                instance is None or c.instance == instance
+            ):
+                lst.append(c)
+
+        return lst
+
+    def __getitem__(self, idx: int) -> GoveeCapability:
+        return self._capabilities[idx]
+
+    def __len__(self) -> int:
+        return len(self._capabilities)
+
+    def __str__(self):
+        return "\n".join([str(c) for c in self._capabilities])
+
+
+class GoveeDevice:
+    def __init__(self, sku: str, mac: str, name: str, type: str, api: "GoveeMain"):
+        self._sku = sku
+        self._mac = mac
+        self._name = name
+        self._type = type
+        self._api = api
+
+        self._capabilities: GoveeCapabilityList = GoveeCapabilityList()
+
+    @property
+    def mac(self) -> str:
+        return self._mac
+
+    @property
+    def sku(self) -> str:
+        return self._sku
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def type(self) -> str:
+        return self._type
+
+    @property
+    def capabilities(self) -> GoveeCapabilityList:
+        return self._capabilities
+
+    def load_capability(self, capability: dict[str, Any]) -> None:
+        self._capabilities.append(
+            GoveeCapability(
+                capability["type"],
+                capability["instance"],
+                capability["parameters"],
+                self,
+            )
         )
+
+    def set(self, type: str, instance: str, value: Any) -> dict[str, Any]:
+        return self._api.control(self, type, instance, value)
+
+
+class GoveeMain:
+    def __init__(self, api_token: str):
+        self._api_token: str = api_token
+
+    def _request(self, path: str, data: Optional[dict[str, Any]]) -> dict[str, Any]:
+        url = f"https://openapi.api.govee.com{path}"
+        headers = {"Govee-API-Key": self._api_token}
+        if not data:
+            return requests.get(url, headers=headers).json()
+
+        headers["Content-Type"] = "application/json"
+        return requests.post(url, json=data, headers=headers).json()
+
+    def control(
+        self, device: GoveeDevice, type: str, instance: str, value: Any
+    ) -> dict[str, Any]:
+        data = {
+            "requestId": "0",
+            "payload": {
+                "sku": device.sku,
+                "device": device.mac,
+                "capability": {
+                    "type": type,
+                    "instance": instance,
+                    "value": value,
+                },
+            },
+        }
+
+        return self._request("/router/api/v1/device/control", data)
+
+    def list_devices(self) -> list[GoveeDevice]:
+        resp = self._request("/router/api/v1/user/devices", None)
+
+        devices: list[GoveeDevice] = []
+        for device in resp["data"]:
+            devices.append(
+                d := GoveeDevice(
+                    device["sku"],
+                    device["device"],
+                    device["deviceName"],
+                    device["type"],
+                    self,
+                )
+            )
+
+            for c in device["capabilities"]:
+                d.load_capability(c)
+
+        return devices
 
 
 class GoveeLight:
@@ -92,12 +260,6 @@ class GoveeLight:
             check ^= i
         d.append(check)
 
-    def start_live(self) -> GoveeLive | None:
-        if self.active_live == None:
-            return GoveeLive(self)
-        else:
-            return None
-
 
 class Govee(APIFunct):
     def __init__(
@@ -128,6 +290,21 @@ class Govee(APIFunct):
                 return APIResult.by_msg(
                     f"Device {"on" if status else "off"}", success=status
                 )
+            case "scene":
+                if len(self.args) < 2:
+                    return APIResult.by_msg("You must provide a scene!", success=False)
+
+                api = GoveeMain(os.environ["GOVEE_API"])
+                device = api.list_devices()[0]
+                capability = device.capabilities(
+                    "devices.capabilities.dynamic_scene", "snapshot"
+                )[0]
+                parameter = capability.parameter(GoveeEnum)
+
+                if self.args[1] not in parameter:
+                    return APIResult.by_msg("Scene not found!", success=False)
+
+                capability.set(parameter[self.args[1]])
             case _:
                 return APIResult.by_msg("SubFunction not found!", success=False)
         return APIResult.by_success(True)

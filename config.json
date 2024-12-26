@@ -27,6 +27,10 @@
   "wol": {
     "joalaptop": "38:fc:98:c9:66:df"
   },
+  "sd": {
+    "checkmark": false
+  },
+  "remote": {},
   "subdevices": [],
   "environ": ".secrets.json"
 }

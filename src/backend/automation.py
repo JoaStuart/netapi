@@ -34,7 +34,7 @@ class Automation:
             if isinstance(automation, bool):
                 if automation:
                     LOG.warning("Could not load automation file %s", f)
-                return
+                continue
 
     @staticmethod
     def _load_by_str(data: str) -> "Automation | bool":

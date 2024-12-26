@@ -13,6 +13,9 @@ from proj_types.event_type import EventType
 
 LOG = logging.getLogger()
 
+type JsonObject = dict[str, Any]
+type JsonList = list[Any]
+
 
 class Event:
     _events: list["Event"] = []
@@ -50,7 +53,7 @@ class Event:
 
             for et in Event._queue:
                 for evt in Event._events:
-                    if evt.event == et and evt.check_time():
+                    if et == evt.event:
                         evt.trigger()
 
             Event._queue.clear()
@@ -61,11 +64,9 @@ class Event:
         try:
             tpe = EventType[data.get("event", "")]
             title: str = data.get("title", "No title!")
-            then: list[dict[str, Any]] = data.get("then", [])
+            actions: JsonList = data.get("actions", [])
 
-            e = Event(tpe, title, then)
-            if "time" in data:
-                e._set_time(data["time"])
+            e = Event(tpe, title, actions)
 
             Event._events.append(e)
 
@@ -78,12 +79,14 @@ class Event:
         Event._trigger.set()
 
     def __init__(
-        self, event: EventType, title: str, then: list[dict[str, Any]]
+        self,
+        event: EventType,
+        title: str,
+        actions: JsonList,
     ) -> None:
         self._event = event
         self._title = title
-        self._then = then
-        self._time = None
+        self._actions = actions
 
     @property
     def event(self) -> EventType:
@@ -104,23 +107,14 @@ class Event:
 
         return (t[0] * 60 * 60) + (t[1] * 60) + t[2]
 
-    def check_time(self) -> bool:
-        """Checks if the time set in the event matches the time we have
-
-        Returns:
-            bool: Whether the time matches
-        """
-
-        if self._time == None:
-            return True
-
+    def _replace_time(self, data: str) -> str:
         # Get the current time in seconds
         now = datetime.now()
         current_seconds = self._seconds_of_day((now.hour, now.minute, now.second))
 
         # Pattern for a time like $20:00
         timepattern = r"\$([0-1]?[0-9]|2[0-3]):([0-5][0-9])(?::[0-5][0-9])?"
-        matches = re.findall(timepattern, self._time)
+        matches = re.findall(timepattern, data)
 
         timevars: dict[str, int] = {}
         for match in matches:
@@ -140,16 +134,69 @@ class Event:
 
         # Insert the seconds since midnight into the time
         # string where they are supposed to go
-        time_str = self._time.replace("$now", str(current_seconds))
+        time_str = data.replace("$time", str(current_seconds))
 
         for s, t in timevars.items():
             time_str = time_str.replace(s, str(t))
+
+        return time_str
+
+    def _replace_date(self, data: str) -> str:
+        now = datetime.now()
+
+        day_of_year = now.month * 31 + now.day
+
+        daypattern = r"\$([12][0-9]|3[01]|[1-9])\.(1[0-2]|[1-9])\."
+        matches = re.findall(daypattern, data)
+
+        dayvars: dict[str, int] = {}
+        for match in matches:
+            match: tuple[str, str] = match
+
+            try:
+                day = int(match[0])
+                month = int(match[1])
+            except ValueError:
+                continue
+
+            dayvars[f"${day}.{month}."] = month * 31 + day
+
+        data = data.replace("$day", str(day_of_year))
+
+        for s, t in dayvars.items():
+            data = data.replace(s, str(t))
+
+        return data
+
+    def check_time(self, action: JsonObject) -> bool:
+        """Checks if the time set in the event matches the time we have
+
+        Returns:
+            bool: Whether the time matches
+        """
+
+        time_el = action.get("time", None)
+
+        if time_el is None:
+            return True
+
+        time_str = str(time_el)
+
+        time_str = self._replace_time(time_str)
+        time_str = self._replace_date(time_str)
 
         # Evaluate the time string
         return bool(eval(time_str, {}, {}))
 
     def trigger(self) -> None:
-        for req in self._then:
+        executed = False
+        for req in self._actions:
+            if not self.check_time(req):
+                continue
+
+            if req.get("else", None) is True and executed:
+                continue
+
             path: str = req.get("path", None)
             if path is None:
                 continue
@@ -160,3 +207,4 @@ class Event:
             from backend.backend import BackendRequest
 
             BackendRequest.execute_backend(fargs, req.get("body", {}))
+            executed = True

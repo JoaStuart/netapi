@@ -2,9 +2,9 @@
   "@type": "event",
   "title": "Shutdown light",
   "event": "SHUTDOWN",
-  "time": "$now > $19:00 or $now < $5:00",
-  "then": [
+  "actions": [
     {
+      "time": "$time > $19:00 or $time < $5:00",
       "path": "/meross.on.1",
       "body": {}
     }

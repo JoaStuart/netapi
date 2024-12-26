@@ -2,13 +2,13 @@
   "@type": "event",
   "title": "Sunset light",
   "event": "SUNSET",
-  "then": [
+  "actions": [
     {
       "path": "/govee.on",
       "body": {}
     },
     {
-      "path": "/govee.bright.50",
+      "path": "/govee.bright.100",
       "body": {}
     }
   ]
