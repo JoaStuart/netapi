@@ -3,16 +3,16 @@ import json
 import os
 import socket
 import logging
-import hashlib
-from typing import Any, Type
+from typing import Any
 from urllib.parse import unquote
 
 from locations import PUBLIC
-from utils import CaseInsensitiveDict, dumpb, mime_by_ext
-from webserver.compression_util import ENCODINGS
+from proj_types.ci_dict import CaseInsensitiveDict
+from utils import dumpb, mime_by_ext
+from webserver.compression_util import Compression
 from encryption.dh_key_ex import DHServer
 from encryption.enc_socket import EncryptedSocket
-from encryption.encryption import AesEncryption, Encryption
+from encryption.encryption import AesEncryption
 from webserver.sitescript import load_script_file
 
 LOG = logging.getLogger()
@@ -210,10 +210,10 @@ class WebRequest:
         body = orig
         accepts = str(self._recv_headers.get("Accept-Encoding", "")).split(", ")
         used = []
-        for name, func in ENCODINGS:
-            if name in accepts:
-                body = func(body)
-                used.append(name)
+        for comp in Compression.algorithms():
+            if comp.name() in accepts:
+                body = comp.compress(body)
+                used.append(comp.name())
 
         if len(orig) <= len(body):
             return orig
