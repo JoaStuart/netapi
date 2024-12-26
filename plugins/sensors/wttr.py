@@ -18,8 +18,8 @@ LOG = logging.getLogger()
 class Wttr(Sensor):
     def __init__(self, repoll_after: float = 5) -> None:
         super().__init__(repoll_after)
-        self.lat = 48.9333
-        self.long = 9.7444
+        self.lat = float(os.environ["LATITUDE"])
+        self.long = float(os.environ["LONGITUDE"])
 
     def poll(self) -> None:
         cur_params = [

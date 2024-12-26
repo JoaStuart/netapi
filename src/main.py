@@ -15,6 +15,7 @@ from locations import VERSION
 import config
 import locations
 from proj_types.cleanup import CleanUp, CleanupHandler
+from quickaction.quickaction import Quickaction
 from webserver.webserver import WebServer
 
 
@@ -132,6 +133,9 @@ def frontend() -> None | int:
 
     tray.update_icon(TrayState.CONNECTED)
     tray.handle_cleanup = CleanupHandler().handle_cleanup
+    
+    LOG.info("Generating QuickAction scripts...")
+    Quickaction.generate(ip)
 
     LOG.info("Connected to backend")
     srv = WebServer(DEV_PORT, FrontendRequest, {"ip": ip})
