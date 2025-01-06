@@ -71,6 +71,11 @@ class WebRequest:
         self._conn = EncryptedSocket(conn)
         self._addr = addr
         self._args = args
+        self._secure: bool = False
+        
+    @property
+    def secure(self) -> bool:
+        return self._secure
 
     def _read_line(self) -> str:
         buff = []
@@ -304,6 +309,7 @@ class WebRequest:
             case "options":
                 rs = self.do_OPTIONS()
             case "secure":
+                self._secure = True
                 return self.do_SECURE()
             case _:
                 LOG.warning("Unknown method [%s]", self.method.lower())

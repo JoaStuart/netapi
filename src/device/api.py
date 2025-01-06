@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from sre_constants import SUCCESS
+import traceback
 from typing import Any, Optional, Type
 
 from backend.interval import (
@@ -57,6 +58,13 @@ class APIResult:
     @staticmethod
     def by_data(data: bytes, mime: str, success: bool = True) -> "APIResult":
         return APIResult(success, data=(data, mime))
+    
+    @staticmethod
+    def by_exception(e: Exception) -> "APIResult":
+        return APIResult(False, {"exception": {
+            "type": type(e),
+            "traceback": traceback.format_exc(),
+        }})
 
     @staticmethod
     def empty() -> "APIResult":
