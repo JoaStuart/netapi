@@ -11,7 +11,6 @@ from backend.multicast_srv import MulticastServer
 from device.device import DEV_PORT
 from frontend.multicast_cli import MulticastClient
 from locations import VERSION
-from config import Config
 import locations
 from proj_types.cleanup import CleanUp, CleanupHandler
 from quickaction.quickaction import Quickaction
@@ -132,7 +131,7 @@ def frontend() -> None | int:
 
     tray.update_icon(TrayState.CONNECTED)
     tray.handle_cleanup = CleanupHandler().handle_cleanup
-    
+
     LOG.info("Generating QuickAction scripts...")
     Quickaction.generate(ip)
 
@@ -177,7 +176,6 @@ def main() -> int:
     args = parse_args()
 
     setup_logger(args.verbose)
-    Config().load_envvars()
 
     locations.make_dirs()
 

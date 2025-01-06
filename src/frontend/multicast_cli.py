@@ -12,8 +12,8 @@ LOG = logging.getLogger()
 
 
 class MulticastClient:
-    KEY_PUBLIC = os.path.join(locations.PUBLIC, "multicast.rsa")
-    
+    KEY_PUBLIC = os.path.join(locations.RESOURCES, "multicast_publ.rsa")
+
     def __init__(self) -> None:
         self._publ_key = self._load_key()
         self._enc_text = self._make_random_text()

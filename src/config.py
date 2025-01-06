@@ -11,32 +11,33 @@ LOG = logging.getLogger()
 
 _CAST = TypeVar("_CAST")
 
+
 @singleton
 class Config:
     PATH = os.path.join(locations.ROOT, "config.json")
-    
+
     def __init__(self) -> None:
         self._data = self._load_config()
         self._load_time = time.time()
-        
+
     def _load_config(self) -> dict[str, Any]:
         """Loads the JSON contents of the config file
 
         Returns:
             dict[str, Any]: The root node of the config file
         """
-        
-        with open(Config.PATH, "r") as rf:
+
+        with open(self.PATH, "r") as rf:
             data = rf.read()
-            
+
         return json.loads(data)
-    
+
     def load_envvars(self) -> None:
         """Loads all specified EnvVars from the config file"""
-        
+
         self._refresh()
 
-        vs = self.load("environ", str, list)
+        vs = self.load("environ", str, dict)
 
         # Load from secrets file
         if isinstance(vs, str):
@@ -48,12 +49,12 @@ class Config:
 
         for k, i in vs.items():
             os.environ[k] = i
-            
+
     def _refresh(self) -> None:
-        if os.path.getmtime(Config.PATH) > self._load_time:
+        if os.path.getmtime(self.PATH) > self._load_time:
             self._data = self._load_config()
             self._load_time = time.time()
-            
+
     def _load_path(self, path: str) -> Any:
         """Loads the variable located at the `path`
 
@@ -62,13 +63,10 @@ class Config:
 
         Returns:
             Any | None: The variable located at the `path` or none if the path is invalid
-            
-        Note:
-            Deprecated for external use! Look at config.load_<type>(path)
         """
-        
+
         self._refresh()
-        
+
         data = self._data
 
         try:
@@ -79,16 +77,16 @@ class Config:
             return None
 
         return data
-            
+
     def load(self, path: str, *cast: Type[_CAST]) -> _CAST:
         val = self._load_path(path)
-        
+
         for c in cast:
             if isinstance(val, c):
                 return val
-        
+
         raise ValueError(f"None of {cast} found at {path}")
-    
+
     def set(self, path: str, val: Any) -> None:
         """Sets the variable at `path` to the specified value
 
@@ -96,11 +94,11 @@ class Config:
             path (str): The path of the value
             val (Any): The value to set
         """
-    
+
         self._refresh()
-        
+
         data = self._data
-        
+
         data_part = data
         path_part = path.split(".")
 
@@ -111,11 +109,13 @@ class Config:
 
         with open(Config.PATH, "w") as wf:
             wf.write(json.dumps(data, indent=2))
-            
+
     def root(self) -> dict[str, Any]:
         return self._data
+
+
+Config().load_envvars()
 
 load = Config().load
 set = Config().set
 root = Config().root
-

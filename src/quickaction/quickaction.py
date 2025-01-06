@@ -12,8 +12,8 @@ BACKEND_IP = "192.168.188.49"
 class Quickaction(Enum):
     GOVEE_ON = "/govee.on"
     GOVEE_OFF = "/govee.off"
-    MEROSS_ON = "/meross.1.on"
-    MEROSS_OFF = "/meross.1.off"
+    MEROSS_ON = "/meross.on.1"
+    MEROSS_OFF = "/meross.off.1"
     LOCK = "/lock"
 
     @staticmethod
@@ -100,5 +100,5 @@ class Quickaction(Enum):
 if __name__ == "__main__":
     ip = sys.argv[1]
     action = sys.argv[2]
-    action_cls = Quickaction(action)
+    action_cls = Quickaction[action]
     print(f"Response: {json.dumps(action_cls.perform_action(ip), indent=4)}")
