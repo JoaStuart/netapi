@@ -52,4 +52,4 @@ class PwrMode(APIFunct):
             dchu.set_power_mode(pwrmode)
             return APIResult.by_success(True)
         except ValueError:
-            return APIResult.by_msg("Not a valid PowerMode!", success=False)
+            return APIResult.by_msg("Not a valid PowerMode!")

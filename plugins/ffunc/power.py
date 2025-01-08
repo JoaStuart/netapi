@@ -8,7 +8,7 @@ class Power(APIFunct):
     def api(self) -> APIResult:
 
         if len(self.args) == 0:
-            return APIResult.by_msg("Modes supported: [off]", success=False)
+            return APIResult.by_msg("Modes supported: [off]")
         elif self.args[0] == "off":
             subprocess.run(["shutdown", "-s", "-t", "0"])
 

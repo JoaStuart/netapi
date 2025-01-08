@@ -2,7 +2,7 @@ import os
 import numpy as np
 import soundfile as sf
 import sounddevice as sd
-from device.api import APIFunct, APIResult
+from device.api import APIFunct
 
 import config
 import locations
@@ -11,7 +11,7 @@ import locations
 class Play(APIFunct):
     """Play Function for JoaLaptop specific device"""
 
-    def api(self) -> APIResult:
+    def api(self) -> dict | tuple[bytes, str]:
         if len(self.args) >= 1:
             sound = os.path.join(
                 locations.ROOT, "resources", "sounds", f"{self.args[0]}.wav"
@@ -37,11 +37,9 @@ class Play(APIFunct):
                 stream.start()
                 stream.write(data.astype(np.float32))
                 stream.stop()
-                return APIResult.by_success(True)
+                return {}
             else:
-                return APIResult.by_msg(
-                    "Specified song not found, aborting.", success=False
-                )
+                return {"play": "Specified song not found, aborting."}
 
         else:
-            return APIResult.by_msg("No sound specified, aborting.", success=False)
+            return {"play": "No sound specified, aborting."}

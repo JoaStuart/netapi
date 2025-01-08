@@ -1,27 +1,13 @@
-from ctypes import (
-    wintypes,
-    Structure,
-    c_wchar,
-    c_bool,
-    c_ulong,
-    c_char,
-    c_byte,
-    c_uint,
-    CFUNCTYPE,
-    POINTER,
-    byref,
-    pointer,
-)
+from ctypes import *
+from ctypes import wintypes
 from threading import Thread
 import traceback
 
 from device.api import APIFunct, APIResult
 
-from ctypes import windll  # type: ignore    Linux does not know the `windll`
-
-user32 = windll.user32  # type: ignore       import because it only exists on
-kernel32 = windll.kernel32  # type: ignore   Windows. User is supposed to only
-dxva2 = windll.dxva2  # type: ignore         add this FFunc on Windows machines!
+user32 = windll.user32
+kernel32 = windll.kernel32
+dxva2 = windll.dxva2
 
 
 class PHYSICAL_MONITOR(Structure):
@@ -62,12 +48,12 @@ class DDC_CI(APIFunct):
 
     def api(self) -> APIResult:
         ret = {}
+        monitor = []
         try:
             if len(self.args) < 2:
                 return APIResult.by_json(self.PHY_MONITORS)
             elif len(self.args) == 2:
                 mon_arg = self.args[0]
-                monitor = []
                 if mon_arg == "*":
                     for k, v in self.PHY_MONITORS.items():
                         if v is not None:
@@ -140,7 +126,7 @@ class DDC_CI(APIFunct):
 
         return hmon_list
 
-    def __poll_physical_monitors(self, hmon_list: list[int]) -> None:
+    def __poll_physical_monitors(self, hmon_list: list[int]) -> dict[int, str | None]:
         for hmon in hmon_list:
             num = c_ulong()
             dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, pointer(num)),
@@ -221,36 +207,3 @@ class DDC_CI(APIFunct):
         result = dxva2.SetVCPFeature(monitor, command, 1)
         if result == 0:
             print(f"Failed to send command {command:02X}. Error code: {result}")
-
-
-if __name__ == "__main__":
-    ddcci = DDC_CI(None, None, None, False)
-
-    while True:
-        print(f"\r{ddcci.capable_monitors()}")
-        try:
-            monitor = int(input("Monitor: "), base=0)
-        except KeyboardInterrupt:
-            break
-        while True:
-            try:
-                code = input("Code [s/c/q][xx]: ")
-
-                if code.startswith("s"):
-                    if "." not in code[1:]:
-                        print("No value provided")
-                        continue
-
-                    ddcci.set_value(
-                        monitor,
-                        int(code[1:].split(".", 1)[0], base=16),
-                        int(code[1:].split(".", 1)[1]),
-                    )
-                elif code.startswith("c"):
-                    ddcci.send_command(monitor, int(code[1:], base=16))
-                elif code.startswith("q"):
-                    print(ddcci.current_value(monitor, int(code[1:], base=16)))
-                else:
-                    print(ddcci.PHY_MONITORS.get(monitor, None))
-            except KeyboardInterrupt:
-                break
