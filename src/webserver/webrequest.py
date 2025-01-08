@@ -3,9 +3,12 @@ import json
 import os
 import socket
 import logging
+import traceback
 from typing import Any
 from urllib.parse import unquote
 
+import config
+from device.ntfy import NtfyAdapter
 from locations import PUBLIC
 from proj_types.ci_dict import CaseInsensitiveDict
 from utils import dumpb, mime_by_ext
@@ -72,7 +75,7 @@ class WebRequest:
         self._addr = addr
         self._args = args
         self._secure: bool = False
-        
+
     @property
     def secure(self) -> bool:
         return self._secure
@@ -276,7 +279,17 @@ class WebRequest:
             with open(path, "rb") as rf:
                 self._send_response(WebResponse(200, "OK", body=(rf.read(), mime)))
         except Exception:
-            LOG.exception("Exception while sending")
+            tback_str = traceback.format_exc()
+            (
+                NtfyAdapter()
+                .set_topic("server")
+                .set_priority(config.load("ntfy.plugin_priority", int))  # type: ignore
+                .set_title("Exception while sending public page")
+                .set_message(tback_str)
+                .set_tags("warning")
+                .dispatch()
+            )
+            LOG.exception(f"Exception while sending:\n{tback_str}")
 
     def _load_sitescript(self, name: str, mime: str, path: str) -> bool:
         if os.path.isfile(os.path.join(PUBLIC, f"{name}.py")):

@@ -6,7 +6,7 @@ import zipfile
 
 LOG = logging.getLogger()
 
-VERSION = 0.62
+VERSION = 0.63
 
 SRC = os.path.dirname(__file__)
 ROOT = os.path.join(SRC, "..")

@@ -21,8 +21,10 @@
   },
   "ntfy": {
     "ip": "192.168.188.48",
-    "port": "5105",
-    "default_topic": "joa"
+    "port": 5105,
+    "default_topic": "joa",
+    "uncaught_priority": 4,
+    "plugin_priority": 3
   },
   "wol": {
     "joalaptop": "38:fc:98:c9:66:df"

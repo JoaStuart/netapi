@@ -5,7 +5,9 @@ import traceback
 import urllib.parse
 from typing import Any, Type
 
+import config
 from device import api
+from device.ntfy import NtfyAdapter
 from device.permissions import DefaultPermissions, PermissionLevel
 from utils import dumpb
 from device.api import APIFunct, APIResult
@@ -107,14 +109,29 @@ class BackendRequest(WebRequest):
                 return e.get_response()
 
             except Exception:
-                LOG.exception(f"Exception on {".".join(fargs)}")
+                tback_str = traceback.format_exc()
+
+                LOG.exception(
+                    f"Exception on {".".join(fargs)}:\n{tback_str}", exc_info=False
+                )
+
+                (
+                    NtfyAdapter()
+                    .set_topic("server")
+                    .set_title("Exception in backend plugin")
+                    .set_priority(config.load("ntfy.plugin_priority", int))  # type: ignore
+                    .set_message(tback_str)
+                    .set_tags("warning")
+                    .dispatch()
+                )
+
                 return WebResponse(
                     500,
                     "FUNC_FAILED",
                     body=dumpb(
                         {
                             "message": f"Function `{".".join(fargs)}` failed!",
-                            "exception": traceback.format_exc(),
+                            "exception": tback_str,
                         }
                     ),
                 )

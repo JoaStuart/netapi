@@ -1,14 +1,18 @@
 import os
+import socket
 import sys
 import time
 import logging
 import argparse
+import traceback
 from types import TracebackType
 from typing import NoReturn, Type
 from backend.automation import Automation
 from backend.event import Event
 from backend.multicast_srv import MulticastServer
+import config
 from device.device import DEV_PORT
+from device.ntfy import NtfyAdapter
 from frontend.multicast_cli import MulticastClient
 from locations import VERSION
 import locations
@@ -193,9 +197,20 @@ def main() -> int:
 
 
 def exception_hook(
-    _: Type[BaseException], __: BaseException, ___: TracebackType | None
+    exc: Type[BaseException], value: BaseException, tb: TracebackType | None
 ):
-    LOG.exception("Uncaught exception")
+    trace_str = "".join(traceback.format_exception(exc, value=value, tb=tb))
+    LOG.exception(trace_str)
+
+    (
+        NtfyAdapter()
+        .set_topic("server")
+        .set_title(f"Uncaught exception on {socket.gethostname()}")
+        .set_priority(config.load("ntfy.uncaught_priority", int))  # type: ignore
+        .set_message(trace_str)
+        .set_tags("warning", "exclamation")
+        .dispatch()
+    )
 
 
 if __name__ == "__main__":

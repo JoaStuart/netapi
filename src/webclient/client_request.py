@@ -337,4 +337,5 @@ class WebClient:
             # TODO maybe Accept-Encoding
             "Cache-Control": "no-cache",
             "User-Agent": f"JoaNetAPI/{locations.VERSION}",
+            "Host": self._ip,
         }

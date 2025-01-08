@@ -1,9 +1,11 @@
 import logging
 from socket import socket
 import traceback
-from typing import Any, Type
+from typing import Any, Literal, Type
+import config
 from device import api
 from device.api import APIFunct, APIResult
+from device.ntfy import NtfyAdapter
 from locations import PL_FFUNC
 from utils import dumpb
 from webserver.webrequest import WebRequest, WebResponse
@@ -75,14 +77,30 @@ class FrontendRequest(WebRequest):
 
                         response.combine(fargs[0], c.api())
             except Exception:
-                LOG.exception(f"Exception on function `{".".join(fargs)}`")
+                tback_str = traceback.format_exc()
+
+                LOG.exception(
+                    f"Exception on function `{".".join(fargs)}`:\n{tback_str}",
+                    exc_info=False,
+                )
+
+                (
+                    NtfyAdapter()
+                    .set_topic("server")
+                    .set_title("Exception in frontend plugin")
+                    .set_priority(config.load("ntfy.plugin_priority", int))  # type: ignore
+                    .set_message(tback_str)
+                    .set_tags("warning")
+                    .dispatch()
+                )
+
                 return WebResponse(
                     500,
                     "FUNC_FAILED",
                     body=dumpb(
                         {
                             "message": f"Function `{".".join(fargs)}` failed!",
-                            "exception": traceback.format_exc(),
+                            "exception": tback_str,
                         }
                     ),
                 )
