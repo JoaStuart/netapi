@@ -117,7 +117,7 @@ class BackendRequest(WebRequest):
 
                 (
                     NtfyAdapter()
-                    .set_topic("server")
+                    .set_topic(config.load("ntfy.server_topic", str))
                     .set_title("Exception in backend plugin")
                     .set_priority(config.load("ntfy.plugin_priority", int))  # type: ignore
                     .set_message(tback_str)

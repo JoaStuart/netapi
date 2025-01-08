@@ -282,7 +282,7 @@ class WebRequest:
             tback_str = traceback.format_exc()
             (
                 NtfyAdapter()
-                .set_topic("server")
+                .set_topic(config.load("ntfy.server_topic", str))
                 .set_priority(config.load("ntfy.plugin_priority", int))  # type: ignore
                 .set_title("Exception while sending public page")
                 .set_message(tback_str)

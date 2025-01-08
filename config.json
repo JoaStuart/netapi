@@ -23,6 +23,7 @@
     "ip": "192.168.188.48",
     "port": 5105,
     "default_topic": "joa",
+    "server_topic": "server",
     "uncaught_priority": 4,
     "plugin_priority": 3
   },

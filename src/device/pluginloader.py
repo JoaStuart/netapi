@@ -5,6 +5,9 @@ import logging
 import traceback
 from typing import Type
 
+import config
+from device.ntfy import NtfyAdapter
+
 LOG = logging.getLogger()
 
 
@@ -51,6 +54,19 @@ def load_plugins(pldir: str, pl_type: list[Type]) -> dict[Type, dict[str, Type]]
                             pl[t] |= {attr_name: attr}
 
             except Exception:
-                LOG.exception("Plugin %s did not load successfully:", f)
+                tback = traceback.format_exc()
+
+                (
+                    NtfyAdapter()
+                    .set_topic(config.load("ntfy.server_topic", str))
+                    .set_title("Plugin load failed")
+                    .set_message(tback)
+                    .set_tags("triangular_flag_on_post")
+                    .dispatch()
+                )
+
+                LOG.exception(
+                    f"Plugin {f} did not load successfully:\n{tback}", exc_info=False
+                )
 
     return pl
