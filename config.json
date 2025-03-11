@@ -9,7 +9,7 @@
     "names": ["Cleo", "Luna"]
   },
   "govee": {
-    "ip": "192.168.188.24"
+    "ip": "192.168.1.93"
   },
   "sky": {
     "width": 640,
@@ -20,7 +20,7 @@
     "save_folder": "../sky"
   },
   "ntfy": {
-    "ip": "192.168.188.48",
+    "ip": "192.168.1.48",
     "port": 5105,
     "default_topic": "joa",
     "server_topic": "server",

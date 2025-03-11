@@ -207,7 +207,7 @@ def exception_hook(
         .set_topic(config.load("ntfy.server_topic", str))
         .set_title(f"Uncaught exception on {socket.gethostname()}")
         .set_priority(config.load("ntfy.uncaught_priority", int))  # type: ignore
-        .set_message(trace_str)
+        .set_message(f"```{trace_str}```")
         .set_tags("warning", "exclamation")
         .dispatch()
     )

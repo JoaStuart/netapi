@@ -59,8 +59,8 @@ def load_plugins(pldir: str, pl_type: list[Type]) -> dict[Type, dict[str, Type]]
                 (
                     NtfyAdapter()
                     .set_topic(config.load("ntfy.server_topic", str))
-                    .set_title("Plugin load failed")
-                    .set_message(tback)
+                    .set_title(f"Plugin {f} failed to load")
+                    .set_message(f"```{tback}```")
                     .set_tags("triangular_flag_on_post")
                     .dispatch()
                 )

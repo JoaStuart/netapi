@@ -284,8 +284,8 @@ class WebRequest:
                 NtfyAdapter()
                 .set_topic(config.load("ntfy.server_topic", str))
                 .set_priority(config.load("ntfy.plugin_priority", int))  # type: ignore
-                .set_title("Exception while sending public page")
-                .set_message(tback_str)
+                .set_title(f"Exception while sending public page {fname}")
+                .set_message(f"```{tback_str}```")
                 .set_tags("warning")
                 .dispatch()
             )

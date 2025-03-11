@@ -16,7 +16,7 @@
         "title": "$names needs water!",
         "message": "",
         "tags": ["warning", "potted_plant"],
-        "priority": 5
+        "priority": 3
       }
     }
   ],
